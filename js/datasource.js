@@ -56,13 +56,16 @@ class ServerSource {
 }
 
 // Public relays that add the CORS headers some providers leave out. They only see the
-// provider URL being requested (an area on the map), nothing about the viewer.
-const ROUTES = [
-  { name: 'direct', wrap: (url) => url },
-  { name: 'relay allorigins', wrap: (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}` },
-  { name: 'relay codetabs', wrap: (url) => `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(url)}` },
+// provider URL being requested (an area on the map), nothing about the viewer. Free relays come
+// and go, so several are raced and whichever answers first is remembered for that provider.
+const DIRECT = { name: 'direct', wrap: (url) => url };
+const RELAYS = [
+  { name: 'codetabs', wrap: (url) => `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(url)}` },
+  { name: 'allorigins', wrap: (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}` },
+  { name: 'thingproxy', wrap: (url) => `https://thingproxy.freeboard.io/fetch/${url}` },
+  { name: 'cors.dev', wrap: (url) => `https://proxy.cors.dev/${url}` },
 ];
-const workingRoute = new Map(); // host -> index into ROUTES that last worked
+const workingRoute = new Map(); // host -> the route (DIRECT or a relay) that last worked
 
 function describe(err) {
   if (err instanceof HttpError) return `HTTP ${err.status}`;
@@ -71,29 +74,52 @@ function describe(err) {
   return err?.message || 'failed';
 }
 
-/** fetchJson() that falls back to a relay when the browser can't read a provider directly. */
-async function getJsonAnyRoute(url) {
+/**
+ * fetchJson() that falls back to relays when the browser can't read a provider directly.
+ * `note` receives short progress messages for the status bar.
+ */
+async function getJsonAnyRoute(url, note = () => {}) {
   const host = new URL(url).host;
-  const start = workingRoute.get(host) ?? 0;
-  const problems = [];
-  for (let i = 0; i < ROUTES.length; i++) {
-    const idx = (start + i) % ROUTES.length;
+  const known = workingRoute.get(host);
+  if (known) {
     try {
-      const json = await fetchJson(ROUTES[idx].wrap(url), { timeoutMs: idx ? 12000 : 8000 });
-      workingRoute.set(host, idx);
+      return await fetchJson(known.wrap(url), { timeoutMs: 10000 });
+    } catch (err) {
+      if (known === DIRECT && err instanceof HttpError) throw err;
+      workingRoute.delete(host); // stopped working: search again below
+    }
+  }
+  if (known !== DIRECT) {
+    try {
+      const json = await fetchJson(url, { timeoutMs: 5000 });
+      workingRoute.set(host, DIRECT);
       return json;
     } catch (err) {
       // A direct HTTP error is the provider's real answer (e.g. 404 or 429); a relay won't change it.
-      if (idx === 0 && err instanceof HttpError) throw err;
-      problems.push(`${ROUTES[idx].name} ${describe(err)}`);
+      if (err instanceof HttpError) throw err;
     }
   }
-  throw new Error(problems.join(', '));
+  note('via relay');
+  const attempts = RELAYS.map((relay) =>
+    fetchJson(relay.wrap(url), { timeoutMs: 10000 }).then(
+      (json) => ({ relay, json }),
+      (err) => Promise.reject(new Error(`${relay.name} ${describe(err)}`)),
+    ),
+  );
+  try {
+    const { relay, json } = await Promise.any(attempts);
+    workingRoute.set(host, relay);
+    return json;
+  } catch (err) {
+    const reasons = (err.errors || []).map((e) => e.message).join(', ');
+    throw new Error(`direct blocked, relays failed (${reasons})`);
+  }
 }
 
 class DirectSource {
   mode = 'direct';
   cooldown = new Map();
+  progress = ''; // what is being tried right now, for the status bar
 
   pollMs(source) {
     return pollMsFor(source);
@@ -107,8 +133,9 @@ class DirectSource {
     if (ready.length) list = ready;
     const errors = [];
     for (const p of list) {
+      this.progress = p.name;
       try {
-        const res = await run(p);
+        const res = await run(p, (msg) => (this.progress = `${p.name} ${msg}`));
         this.cooldown.delete(p.id);
         return { source: p.id, sourceName: p.name, age: 0, ...res };
       } catch (err) {
@@ -121,9 +148,9 @@ class DirectSource {
   }
 
   area(lat, lon, r, source) {
-    return this._withFallback(source, () => true, async (p) => {
+    return this._withFallback(source, () => true, async (p, note) => {
       const radius = effectiveRadius(p, r);
-      const aircraft = p.parse(await getJsonAnyRoute(p.areaUrl(lat, lon, radius)));
+      const aircraft = p.parse(await getJsonAnyRoute(p.areaUrl(lat, lon, radius), note));
       return { aircraft, radius, capped: radius < r };
     });
   }

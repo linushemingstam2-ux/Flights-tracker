@@ -3,7 +3,7 @@
 import { AircraftStore } from './store.js';
 import { AircraftLayer } from './aircraft-layer.js';
 import { Panel } from './panel.js';
-import { createDataSource } from './datasource.js';
+import { createDataSource } from './datasource.js?v=5';
 import { SimSource } from './sim.js';
 import { loadSettings, saveSettings, makeFilter, DEFAULTS } from './settings.js';
 import { svgIcon, shapeFor, altitudeHue, CLASSIC_FILL } from './icons.js';
@@ -377,7 +377,9 @@ function renderStatus() {
   el.classList.toggle('error', Boolean(status.error) || Boolean(stale));
 
   let text;
-  if (!source || (!status.lastUpdate && !status.error)) text = 'Connecting…';
+  if (!source || (!status.lastUpdate && !status.error)) {
+    text = source?.progress ? `Connecting to ${source.progress}…` : 'Connecting…';
+  }
   else if (status.error && !status.lastUpdate) text = 'No connection to flight data';
   else {
     text = `${nf.format(layer.visibleCount)} aircraft`;
@@ -401,7 +403,8 @@ function renderStatus() {
     src.textContent = 'Simulated';
   }
 
-  $('banner').hidden = demo || status.failures < FAILURES_BEFORE_BANNER;
+  // Before anything has loaded, explain a failure straight away; later, ride out brief hiccups.
+  $('banner').hidden = demo || status.failures < (status.lastUpdate ? FAILURES_BEFORE_BANNER : 1);
   if (!$('banner').hidden) $('banner-text').textContent = 'Live flight data is unavailable right now.';
   $('banner-detail').textContent = status.error || '';
 
