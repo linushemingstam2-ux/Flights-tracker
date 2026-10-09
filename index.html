@@ -8,7 +8,7 @@
     <meta name="theme-color" content="#0b111a" />
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
-    <link rel="stylesheet" href="css/app.css" />
+    <link rel="stylesheet" href="css/app.css?v=4" />
   </head>
   <body>
     <header class="topbar">
@@ -116,7 +116,6 @@
         <select id="s-source">
           <option value="auto">Automatic (best available)</option>
           <option value="adsblol">adsb.lol</option>
-          <option value="airplaneslive">airplanes.live</option>
           <option value="adsbfi">adsb.fi</option>
           <option value="opensky">OpenSky Network</option>
         </select>
@@ -128,7 +127,6 @@
       <p class="about">
         Live positions come from community ADS-B networks
         (<a href="https://adsb.lol" target="_blank" rel="noopener">adsb.lol</a>,
-        <a href="https://airplanes.live" target="_blank" rel="noopener">airplanes.live</a>,
         <a href="https://adsb.fi" target="_blank" rel="noopener">adsb.fi</a>,
         <a href="https://opensky-network.org" target="_blank" rel="noopener">OpenSky</a>).
         Routes from <a href="https://www.adsbdb.com" target="_blank" rel="noopener">adsbdb</a>, photos from
@@ -205,6 +203,6 @@
     </aside>
 
     <script src="vendor/leaflet/leaflet.js"></script>
-    <script type="module" src="js/main.js"></script>
+    <script type="module" src="js/main.js?v=4"></script>
   </body>
 </html>

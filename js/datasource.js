@@ -1,6 +1,7 @@
 // Where live traffic comes from in the browser:
 //  - ServerSource: the bundled Node server's /api (best: shared cache, no CORS limits)
-//  - DirectSource: straight to the public providers (for static hosting, e.g. GitHub Pages)
+//  - DirectSource: straight to the public providers (for static hosting, e.g. GitHub Pages),
+//    through a public CORS relay when a provider doesn't allow browsers to read it directly
 
 import { PROVIDERS, AUTO_ORDER, effectiveRadius, fetchJson, HttpError } from './shared/providers.js';
 import { routeUrl, aircraftInfoUrl, photoUrl, parseRoute, parseAircraftInfo, parsePhoto } from './shared/enrich.js';
@@ -54,6 +55,42 @@ class ServerSource {
   }
 }
 
+// Public relays that add the CORS headers some providers leave out. They only see the
+// provider URL being requested (an area on the map), nothing about the viewer.
+const ROUTES = [
+  { name: 'direct', wrap: (url) => url },
+  { name: 'relay allorigins', wrap: (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}` },
+  { name: 'relay codetabs', wrap: (url) => `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(url)}` },
+];
+const workingRoute = new Map(); // host -> index into ROUTES that last worked
+
+function describe(err) {
+  if (err instanceof HttpError) return `HTTP ${err.status}`;
+  if (err?.name === 'TimeoutError' || err?.name === 'AbortError') return 'timed out';
+  if (err instanceof TypeError) return 'blocked'; // usually CORS: the provider doesn't allow browsers
+  return err?.message || 'failed';
+}
+
+/** fetchJson() that falls back to a relay when the browser can't read a provider directly. */
+async function getJsonAnyRoute(url) {
+  const host = new URL(url).host;
+  const start = workingRoute.get(host) ?? 0;
+  const problems = [];
+  for (let i = 0; i < ROUTES.length; i++) {
+    const idx = (start + i) % ROUTES.length;
+    try {
+      const json = await fetchJson(ROUTES[idx].wrap(url), { timeoutMs: idx ? 12000 : 8000 });
+      workingRoute.set(host, idx);
+      return json;
+    } catch (err) {
+      // A direct HTTP error is the provider's real answer (e.g. 404 or 429); a relay won't change it.
+      if (idx === 0 && err instanceof HttpError) throw err;
+      problems.push(`${ROUTES[idx].name} ${describe(err)}`);
+    }
+  }
+  throw new Error(problems.join(', '));
+}
+
 class DirectSource {
   mode = 'direct';
   cooldown = new Map();
@@ -77,8 +114,7 @@ class DirectSource {
       } catch (err) {
         const limited = err instanceof HttpError && err.status === 429;
         this.cooldown.set(p.id, Date.now() + (limited ? 60_000 : 20_000));
-        // A TypeError from fetch() is usually the provider not allowing browser (CORS) access.
-        errors.push(`${p.name}: ${err instanceof TypeError ? 'blocked or unreachable' : err.message}`);
+        errors.push(`${p.name}: ${describe(err)}`);
       }
     }
     throw new Error(errors.length ? `No live data source available (${errors.join('; ')})` : 'Not supported');
@@ -87,7 +123,7 @@ class DirectSource {
   area(lat, lon, r, source) {
     return this._withFallback(source, () => true, async (p) => {
       const radius = effectiveRadius(p, r);
-      const aircraft = p.parse(await fetchJson(p.areaUrl(lat, lon, radius)));
+      const aircraft = p.parse(await getJsonAnyRoute(p.areaUrl(lat, lon, radius)));
       return { aircraft, radius, capped: radius < r };
     });
   }
@@ -115,7 +151,7 @@ class DirectSource {
 
 async function parseOr404(url, parse) {
   try {
-    return parse(await fetchJson(url));
+    return parse(await getJsonAnyRoute(url));
   } catch (err) {
     if (err instanceof HttpError && err.status === 404) return null;
     throw err;

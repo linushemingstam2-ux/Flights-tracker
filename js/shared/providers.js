@@ -44,7 +44,7 @@ const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
 const str = (v) => (typeof v === 'string' ? v.trim() : '');
 const round = (v, digits) => (v == null ? null : Number(v.toFixed(digits)));
 
-/** One aircraft from a readsb-style feed (adsb.lol, airplanes.live, adsb.fi). */
+/** One aircraft from a readsb-style feed (adsb.lol, adsb.fi). */
 export function normalizeReadsbAircraft(a) {
   if (!a || typeof a !== 'object') return null;
   const lat = num(a.lat);
@@ -157,17 +157,6 @@ export const PROVIDERS = {
     lookupUrl: (kind, value) => `https://api.adsb.lol/v2/${kind}/${encodeURIComponent(value)}`,
     parse: parseReadsb,
   },
-  airplaneslive: {
-    id: 'airplaneslive',
-    name: 'airplanes.live',
-    home: 'https://airplanes.live',
-    maxRadius: 250,
-    pollMs: 5000,
-    minIntervalMs: 1000,
-    areaUrl: (lat, lon, r) => `https://api.airplanes.live/v2/point/${coord(lat)}/${coord(lon)}/${Math.round(r)}`,
-    lookupUrl: (kind, value) => `https://api.airplanes.live/v2/${kind}/${encodeURIComponent(value)}`,
-    parse: parseReadsb,
-  },
   adsbfi: {
     id: 'adsbfi',
     name: 'adsb.fi',
@@ -176,7 +165,7 @@ export const PROVIDERS = {
     pollMs: 5000,
     minIntervalMs: 1000,
     areaUrl: (lat, lon, r) =>
-      `https://opendata.adsb.fi/api/v2/lat/${coord(lat)}/lon/${coord(lon)}/dist/${Math.round(r)}`,
+      `https://opendata.adsb.fi/api/v3/lat/${coord(lat)}/lon/${coord(lon)}/dist/${Math.round(r)}`,
     lookupUrl: (kind, value) =>
       `https://opendata.adsb.fi/api/v2/${kind === 'reg' ? 'registration' : kind}/${encodeURIComponent(value)}`,
     parse: parseReadsb,
@@ -205,7 +194,7 @@ export const PROVIDERS = {
 };
 
 /** Order tried when the source is "auto". */
-export const AUTO_ORDER = ['adsblol', 'airplaneslive', 'adsbfi', 'opensky'];
+export const AUTO_ORDER = ['adsblol', 'adsbfi', 'opensky'];
 
 export function isValidSource(id) {
   return id === 'auto' || Object.hasOwn(PROVIDERS, id);

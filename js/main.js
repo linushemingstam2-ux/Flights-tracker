@@ -48,6 +48,8 @@ const FAILURES_BEFORE_BANNER = 3;
 const settings = loadSettings();
 // Older saved choices: "osm" is now the light style.
 if (!Object.hasOwn(MAP_STYLES, settings.mapStyle)) settings.mapStyle = settings.mapStyle === 'osm' ? 'light' : 'dark';
+// A saved data source that no longer exists (e.g. airplanes.live) falls back to automatic.
+if (settings.source !== 'auto' && !Object.hasOwn(PROVIDERS, settings.source)) settings.source = 'auto';
 const urlDemo = new URLSearchParams(location.search).get('demo') === '1';
 const store = new AircraftStore();
 let filter = makeFilter(settings.filters);
