@@ -270,6 +270,11 @@ kbd {
   cursor: pointer;
 }
 
+/* Dark map: the standard street map, inverted into a night style. Aircraft are in their own pane. */
+#map.map-dark .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9) saturate(0.35);
+}
+
 .aircraft-canvas {
   position: absolute;
   left: 0;
@@ -349,6 +354,14 @@ kbd {
   border-radius: 14px;
   flex-wrap: wrap;
   justify-content: center;
+}
+
+.banner-detail {
+  flex-basis: 100%;
+  text-align: center;
+  color: var(--muted);
+  font-size: 11px;
+  white-space: normal;
 }
 
 .banner-actions {

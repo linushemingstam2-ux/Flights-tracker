@@ -14,27 +14,29 @@ import { PROVIDERS } from './shared/providers.js';
 const L = window.L;
 const $ = (id) => document.getElementById(id);
 
-const TILES = {
-  dark: {
-    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-    attribution:
-      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    subdomains: 'abcd',
+// Map backgrounds, all usable without an API key. Each style lists backup tile servers,
+// tried in order when the current one fails to load.
+const OSM_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+const STREET_TILES = [
+  { url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', attribution: OSM_ATTRIBUTION },
+  { url: 'https://tile.openstreetmap.de/{z}/{x}/{y}.png', attribution: OSM_ATTRIBUTION },
+  {
+    url: 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
+    attribution: `${OSM_ATTRIBUTION}, tiles by HOT / OSM France`,
+    subdomains: 'abc',
   },
-  light: {
-    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-    attribution:
-      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    subdomains: 'abcd',
-  },
+];
+const MAP_STYLES = {
+  dark: { tiles: STREET_TILES, dark: true }, // street map, darkened with a CSS filter
+  light: { tiles: STREET_TILES },
   satellite: {
-    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    attribution: 'Imagery &copy; Esri, Maxar, Earthstar Geographics',
-    maxNativeZoom: 18,
-  },
-  osm: {
-    url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    tiles: [
+      {
+        url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        attribution: 'Imagery &copy; Esri, Maxar, Earthstar Geographics',
+      },
+      ...STREET_TILES,
+    ],
   },
 };
 
@@ -44,6 +46,8 @@ const FAILURES_BEFORE_BANNER = 3;
 // ── State ────────────────────────────────────────────────────────────────
 
 const settings = loadSettings();
+// Older saved choices: "osm" is now the light style.
+if (!Object.hasOwn(MAP_STYLES, settings.mapStyle)) settings.mapStyle = settings.mapStyle === 'osm' ? 'light' : 'dark';
 const urlDemo = new URLSearchParams(location.search).get('demo') === '1';
 const store = new AircraftStore();
 let filter = makeFilter(settings.filters);
@@ -70,16 +74,27 @@ L.control.zoom({ position: 'bottomright' }).addTo(map);
 map.attributionControl.setPrefix('<a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>');
 
 let tileLayer = null;
-function applyMapStyle() {
-  const t = TILES[settings.mapStyle] || TILES.dark;
+let tileIndex = 0;
+function applyMapStyle(nextServer = false) {
+  const style = MAP_STYLES[settings.mapStyle];
+  tileIndex = nextServer ? tileIndex + 1 : 0;
+  const t = style.tiles[tileIndex];
   if (tileLayer) map.removeLayer(tileLayer);
+  $('map').classList.toggle('map-dark', Boolean(style.dark));
+  let loaded = 0;
+  let failed = 0;
   tileLayer = L.tileLayer(t.url, {
     attribution: t.attribution,
     subdomains: t.subdomains || 'abc',
     maxZoom: 18,
-    maxNativeZoom: t.maxNativeZoom || 18,
-    detectRetina: false,
-  }).addTo(map);
+    maxNativeZoom: 18,
+  });
+  tileLayer.on('tileload', () => loaded++);
+  // A server that keeps failing before any tile has loaded is down or blocked: use the next one.
+  tileLayer.on('tileerror', () => {
+    if (++failed >= 6 && loaded === 0 && tileIndex < style.tiles.length - 1) applyMapStyle(true);
+  });
+  tileLayer.addTo(map);
 }
 applyMapStyle();
 
@@ -386,7 +401,7 @@ function renderStatus() {
 
   $('banner').hidden = demo || status.failures < FAILURES_BEFORE_BANNER;
   if (!$('banner').hidden) $('banner-text').textContent = 'Live flight data is unavailable right now.';
-  $('banner').title = status.error || '';
+  $('banner-detail').textContent = status.error || '';
 
   const notice = $('notice');
   notice.hidden = !coverage;
