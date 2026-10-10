@@ -76,3 +76,15 @@ test('filters', () => {
   assert.equal(f({ text: 'DLH' })(base), false);
   assert.equal(f({ text: '(' })(base), false, 'regex characters are escaped');
 });
+
+test('puts earlier positions in front of the trail, keeping what it already has', () => {
+  const s = new AircraftStore();
+  s.ingest([base], { t: 10_000 });
+  s.addHistory('4007f1', [
+    { lat: 50, lon: -2, alt: 0, t: 0 },
+    { lat: 50.5, lon: -1, alt: 20000, t: 5_000 },
+    { lat: 51, lon: 0, alt: 38000, t: 10_000 }, // the position the store already has
+  ]);
+  assert.deepEqual(s.get('4007f1').trail.map((p) => p.t), [0, 5_000, 10_000]);
+  s.addHistory('ffffff', [{ lat: 0, lon: 0, alt: 0, t: 0 }]); // unknown aircraft: ignored
+});

@@ -1,12 +1,12 @@
 // Flight radar app: map, live polling, selection, search, filters and settings.
 
-import { AircraftStore } from './store.js';
-import { AircraftLayer } from './aircraft-layer.js?v=20';
-import { Panel } from './panel.js?v=18';
+import { AircraftStore } from './store.js?v=2';
+import { AircraftLayer } from './aircraft-layer.js?v=21';
+import { Panel } from './panel.js?v=19';
 import { createDataSource } from './datasource.js?v=8';
-import { SimSource } from './sim.js';
+import { SimSource } from './sim.js?v=2';
 import { loadSettings, saveSettings, makeFilter, DEFAULTS } from './settings.js';
-import { svgIcon, shapeFor, CLASSIC_FILL } from './icons.js?v=14';
+import { svgIcon, shapeFor, CLASSIC_FILL } from './icons.js?v=15';
 import { shortAlt } from './format.js?v=2';
 import { distanceNm, normalizeLon } from './shared/geo.js';
 import { PROVIDERS } from './shared/providers.js';
@@ -317,13 +317,21 @@ function useSource(next) {
   store.clear();
   deselect();
   coverage = null;
+  routeCache.clear(); // demo and live flights can share a callsign or hex
+  detailCache.clear();
   Object.assign(status, { lastUpdate: 0, sourceName: '', sourceId: '', error: null, failures: 0 });
   $('demo-badge').hidden = source.mode !== 'demo';
+  $('s-demo').checked = source.mode === 'demo';
   renderStatus();
   refresh();
 }
 
 async function setDemo(on) {
+  // Keep the choice in the address, so a reload or a shared link shows the same traffic.
+  const url = new URL(location.href);
+  if (on) url.searchParams.set('demo', '1');
+  else url.searchParams.delete('demo');
+  history.replaceState(null, '', url);
   if (on) return useSource(new SimSource());
   if (!liveSource) liveSource = await createDataSource();
   useSource(liveSource);
@@ -363,6 +371,7 @@ function select(hex, { fly = false } = {}) {
   panel.show(ac, { demo: source.mode === 'demo' });
   tickPanel();
   loadDetails(ac);
+  loadTrail(ac);
   if (fly) flyToVisible(store.positionAt(ac, Date.now()), Math.max(map.getZoom(), 9));
   writeHash();
 }
@@ -385,10 +394,18 @@ async function loadDetails(ac) {
   }
 }
 
+/** The whole path flown so far, where the source knows it (demo flights). */
+async function loadTrail(ac) {
+  if (!source.trail) return;
+  const hex = ac.hex;
+  const points = await source.trail(hex).catch(() => null);
+  if (store.selectedHex === hex) store.addHistory(hex, points);
+}
+
 async function loadRoute(ac) {
   const cs = ac.callsign;
   enrichedCallsign = cs;
-  if (source.mode === 'demo' || !/^[A-Z0-9]{2,8}$/.test(cs)) return;
+  if (!/^[A-Z0-9]{2,8}$/.test(cs)) return;
   const r = await cached(routeCache, cs, () => source.route(cs));
   if (store.selectedHex === ac.hex && enrichedCallsign === cs) {
     route = r;
@@ -697,6 +714,9 @@ bindFilters();
 function bindSettings() {
   const trails = $('s-trails');
   trails.checked = settings.allTrails;
+  const demo = $('s-demo');
+  demo.checked = urlDemo;
+  demo.addEventListener('change', () => setDemo(demo.checked));
 
   bindChoice($('s-map'), settings.mapStyle, (v) => {
     settings.mapStyle = v;

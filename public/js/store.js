@@ -109,6 +109,15 @@ export class AircraftStore {
     return seen;
   }
 
+  /** Put earlier positions ([{ lat, lon, alt, t }], oldest first) in front of an aircraft's trail. */
+  addHistory(hex, points) {
+    const ac = this.byHex.get(hex);
+    if (!ac || !points?.length) return;
+    const first = ac.trail[0]?.t ?? Infinity;
+    ac.trail = points.filter((p) => p.t < first).concat(ac.trail);
+    this.version++;
+  }
+
   clear() {
     this.byHex.clear();
     this.sorted = [];

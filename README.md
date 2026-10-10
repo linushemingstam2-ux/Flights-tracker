@@ -12,6 +12,10 @@ A Flightradar24-style map of the aircraft flying right now, using free community
   3. Tap **Import** next to Flights-tracker, then **Deploy**.
   4. Open the `https://….vercel.app` link it shows.
 
+- **Demo mode:** add `?demo=1` to the address, or turn on **Demo mode** in Settings. It shows thousands of
+  simulated flights on real routes between real airports, worldwide, with no internet data needed: tap a
+  plane to see where it is flying from and to, how far it has come, and its path since take-off.
+
 Developer notes: `public/` is the web app (also published on the `gh-pages` branch for GitHub Pages),
 `api/` holds the Vercel functions, and `server.js` runs everything locally with `npm start`.
 See `lib/` for the server code and `test/` for the tests (`npm test`).

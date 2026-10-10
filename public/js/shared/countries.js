@@ -158,6 +158,12 @@ export function countryForHex(hex) {
   return null;
 }
 
+/** [first, last] ICAO address allocated to a country (ISO 3166 alpha-2 code), or null. */
+export function hexRangeFor(code) {
+  const r = RANGES.find((range) => range[3] === code);
+  return r ? [r[0], r[1]] : null;
+}
+
 /** Flag emoji from an ISO 3166 alpha-2 code. */
 export function flagEmoji(code) {
   if (!/^[A-Z]{2}$/.test(code || '')) return '';
