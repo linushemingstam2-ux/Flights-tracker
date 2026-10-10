@@ -14,9 +14,9 @@ import {
   SELECTED_FILL,
   EMERGENCY_FILL,
   GROUND_FILL,
-} from './icons.js?v=13';
+} from './icons.js?v=14';
 import { destinationPoint, greatCirclePoints } from './shared/geo.js';
-import { isEmergency } from './format.js';
+import { isEmergency } from './format.js?v=2';
 
 const L = window.L;
 

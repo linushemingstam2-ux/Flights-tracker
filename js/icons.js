@@ -1,8 +1,8 @@
 // Aircraft symbols. Each model in aircraft-models.js is turned into top-view geometry from its
 // real dimensions, nudged towards classic map-icon proportions (a slightly fuller fuselage,
 // wings and engines) so every type stays legible at a glance. It is painted once per colour and
-// size into a sprite: a flat silhouette with a crisp outline, finished with just a little depth —
-// a soft sheen along the fuselage, gentle tone steps between parts and fine seams where they meet.
+// size into a sprite: one flat colour with a crisp outline, finished with just a little depth —
+// a rounded sheen along the fuselage, shaded engines and a soft shadow where parts overlap.
 // Helicopter rotors are animated by the map layer.
 
 import { MODELS, modelIdFor } from './aircraft-models.js?v=9';
@@ -424,10 +424,10 @@ function tone(c, t) {
   return hslToRgb(h, s, l * (1 + t));
 }
 
-/** The palette for one symbol: the body colour plus gentle tone steps for the other parts. */
+/** The palette for one symbol: one flat colour for the airframe, with deeper engines and fin. */
 function paintFor(fill) {
   const c = parseColor(fill);
-  return { body: c, wing: tone(c, -0.075), tail: tone(c, -0.05), engine: tone(c, -0.2), fin: tone(c, -0.12) };
+  return { body: c, wing: c, tail: c, engine: tone(c, -0.17), fin: tone(c, -0.035) };
 }
 
 const OUTLINE = 'rgba(8, 11, 16, 0.86)';
@@ -581,33 +581,33 @@ function outline(ctx, p, u) {
   ctx.stroke(p);
 }
 
+/**
+ * Sleek and flat, with a little depth: one flat colour and a crisp outline, plus a rounded sheen
+ * on the fuselage, shaded engines and a soft shadow where the fuselage sits on the wings.
+ */
 function paintAirframe(ctx, id, g, P, paint, u, blur) {
   const C = paint;
-  const [yTop, yBottom] = g.wingSpanY ?? [0, BOX];
   outline(ctx, P.solid, u);
 
   // Under-wing engines first: the wing covers their rear half, as seen from above.
   nacelles(ctx, g.fans, P.fans, C.engine, u);
-  surface2d(ctx, P.wings, C.wing, yTop, yBottom);
-  if (P.fans) seam(ctx, P.fans, P.wings, u);
+  fillWith(ctx, P.wings, rgb(C.wing));
+  if (P.fans) seam(ctx, P.fans, P.wings, u, 0.55);
   const lowTail = P.ht && !g.tTail;
-  if (lowTail) surface2d(ctx, P.ht, C.tail, g.htTop ?? yTop, BOX);
+  if (lowTail) fillWith(ctx, P.ht, rgb(C.tail));
 
   // Propeller nacelles sit on top of the wing.
   if (P.propNacelles) {
-    contact(ctx, P.wings, P.propNacelles, blur * 0.6, 0.18);
+    contact(ctx, P.wings, P.propNacelles, blur * 0.6, 0.16);
     nacelles(ctx, g.props.filter((p) => p.nacelle).map((p) => p.nacelle), P.propNacelles, C.engine, u);
-    seam(ctx, P.wings, P.propNacelles, u, 0.8);
   }
 
-  // Fuselage, with a faint contact shadow and a crisp seam where it meets the wings and tail.
   const under = new Path2D();
   under.addPath(P.wings);
   if (lowTail) under.addPath(P.ht);
   contact(ctx, under, P.fuselage, blur * 0.7, 0.2);
-  seam(ctx, under, P.fuselage, u);
   fillWith(ctx, P.fuselage, rgb(C.body));
-  sheen(ctx, P.fuselage, BOX / 2, g.W / 2, 1);
+  sheen(ctx, P.fuselage, BOX / 2, g.W / 2, 0.85);
 
   // Engines on the fuselage and over the wing.
   if (P.pylons) fillWith(ctx, P.pylons, rgb(C.wing));
@@ -615,19 +615,17 @@ function paintAirframe(ctx, id, g, P, paint, u, blur) {
     if (!Pn) continue;
     contact(ctx, g.otw === list ? P.wings : P.fuselage, Pn, blur * 0.5, 0.18);
     nacelles(ctx, list, Pn, C.engine, u);
-    seam(ctx, g.otw === list ? P.wings : P.fuselage, Pn, u, 0.8);
   }
 
   // Fin(s), then a T-tail on top.
   for (const f of [P.fin, P.fins]) {
     if (!f) continue;
     fillWith(ctx, f, rgb(C.fin));
-    sheen(ctx, f, BOX / 2, Math.max(u, g.W * 0.1), 0.8);
+    sheen(ctx, f, BOX / 2, Math.max(u, g.W * 0.1), 0.6);
   }
   if (P.ht && g.tTail) {
     contact(ctx, P.fuselage, P.ht, blur * 0.6, 0.16);
-    surface2d(ctx, P.ht, C.tail, g.htTop ?? yTop, BOX);
-    seam(ctx, P.fuselage, P.ht, u, 0.8);
+    fillWith(ctx, P.ht, rgb(C.tail));
   }
   if (g.nozzles) {
     for (const [x, y] of g.nozzles) {
@@ -644,7 +642,7 @@ function paintAirframe(ctx, id, g, P, paint, u, blur) {
     const dome = new Path2D();
     dome.arc(x, y, r, 0, Math.PI * 2);
     outline(ctx, dome, u);
-    fillWith(ctx, dome, rgb(tone(C.body, -0.04)));
+    fillWith(ctx, dome, rgb(C.body));
     sheen(ctx, dome, x, r, 0.7);
     ctx.fillStyle = 'rgba(0,0,0,0.3)';
     ctx.fillRect(x - r, y - r * 0.1, r * 2, r * 0.2);
