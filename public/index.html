@@ -20,7 +20,7 @@
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="favicon.svg" />
     <link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
-    <link rel="stylesheet" href="css/app.css?v=27" />
+    <link rel="stylesheet" href="css/app.css?v=28" />
   </head>
   <body>
     <main id="map" aria-label="Map of live air traffic"></main>
@@ -138,27 +138,29 @@
     <div id="flight-scrim" class="flight-scrim" aria-hidden="true"></div>
     <aside id="panel" class="flight glass" hidden aria-label="Flight details">
       <div class="flight-inner" id="p-inner">
-      <div class="flight-hero" id="p-hero">
-        <div id="p-art" class="hero-art" aria-hidden="true"></div>
-        <img id="p-photo" alt="" referrerpolicy="no-referrer" draggable="false" />
         <button id="p-handle" class="hero-grip" type="button" aria-label="Show more details"><span></span></button>
-        <span id="p-photo-credit" class="hero-credit"></span>
         <button id="p-close" class="hero-close" type="button" aria-label="Close details">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg>
         </button>
-        <div class="hero-text">
-          <h2 id="p-callsign">—</h2>
-          <div id="p-type" class="hero-type"></div>
-          <div id="p-route" class="hero-route" hidden>
-            <div class="airport"><b id="p-orig-code"></b><span id="p-orig-city"></span></div>
-            <div class="hero-line" aria-hidden="true"><i id="p-progress"></i><svg id="p-progress-plane" viewBox="0 0 32 32"><path d="M16 1C17 1 17.6 2.4 17.6 4L17.6 11 30 18.5 30 20.5 17.6 16.5 17.4 25 21.5 28.2 21.5 29.8 16.6 28.6 16 30.5 15.4 28.6 10.5 29.8 10.5 28.2 14.6 25 14.4 16.5 2 20.5 2 18.5 14.4 11 14.4 4C14.4 2.4 15 1 16 1Z"/></svg></div>
-            <div class="airport right"><b id="p-dest-code"></b><span id="p-dest-city"></span></div>
-          </div>
-        </div>
-      </div>
-
       <div class="flight-body" id="p-body">
         <div class="flight-content" id="p-content">
+          <div class="flight-hero" id="p-hero">
+            <div class="hero-photo">
+              <div id="p-art" class="hero-art" aria-hidden="true"></div>
+              <img id="p-photo" alt="" referrerpolicy="no-referrer" draggable="false" />
+            </div>
+            <span id="p-photo-credit" class="hero-credit"></span>
+            <div class="hero-text">
+              <h2 id="p-callsign">—</h2>
+              <div id="p-type" class="hero-type"></div>
+              <div id="p-route" class="hero-route" hidden>
+                <div class="airport"><b id="p-orig-code"></b><span id="p-orig-city"></span></div>
+                <div class="hero-line" aria-hidden="true"><i id="p-progress"></i><svg id="p-progress-plane" viewBox="0 0 32 32"><path d="M16 1C17 1 17.6 2.4 17.6 4L17.6 11 30 18.5 30 20.5 17.6 16.5 17.4 25 21.5 28.2 21.5 29.8 16.6 28.6 16 30.5 15.4 28.6 10.5 29.8 10.5 28.2 14.6 25 14.4 16.5 2 20.5 2 18.5 14.4 11 14.4 4C14.4 2.4 15 1 16 1Z"/></svg></div>
+                <div class="airport right"><b id="p-dest-code"></b><span id="p-dest-city"></span></div>
+              </div>
+            </div>
+          </div>
+          <div class="flight-details">
           <div class="flight-actions">
             <button id="p-follow" class="btn" type="button" aria-pressed="false">
               <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="6.5"/><circle class="dot" cx="12" cy="12" r="2"/><path d="M12 2.8v3M12 18.2v3M2.8 12h3M18.2 12h3"/></svg>
@@ -202,12 +204,13 @@
             <div><dt>Data</dt><dd id="p-source">—</dd></div>
             <div><dt>Position</dt><dd id="p-pos">—</dd></div>
           </dl>
+          </div>
         </div>
       </div>
       </div>
     </aside>
 
     <script src="vendor/leaflet/leaflet.js"></script>
-    <script type="module" src="js/main.js?v=27"></script>
+    <script type="module" src="js/main.js?v=28"></script>
   </body>
 </html>

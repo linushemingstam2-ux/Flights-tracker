@@ -51,6 +51,7 @@
   --rim: inset 0 0 0 0.5px rgba(255, 255, 255, 0.2);
   --glass-shadow: 0 10px 28px rgba(0, 0, 0, 0.36), 0 1px 3px rgba(0, 0, 0, 0.26);
   --scrim: rgba(0, 0, 0, 0.2);
+  --hero-halo: rgba(0, 0, 0, 0.45);
   --grip: rgba(235, 235, 245, 0.3);
   --btn-on: #ffffff;
   --btn-on-ink: #000000;
@@ -91,6 +92,7 @@
   --rim: inset 0 0 0 0.5px rgba(255, 255, 255, 0.7);
   --glass-shadow: 0 10px 28px rgba(0, 0, 0, 0.13), 0 1px 3px rgba(0, 0, 0, 0.09);
   --scrim: rgba(0, 0, 0, 0.08);
+  --hero-halo: rgba(255, 255, 255, 0.85);
   --grip: rgba(60, 60, 67, 0.3);
   --btn-on: #000000;
   --btn-on-ink: #ffffff;
@@ -1050,6 +1052,7 @@ kbd {
 /* The card's contents keep the card's full height while it is dragged; the card only clips them.
    On its own layer, they are then never laid out or painted again while the card moves. */
 .flight-inner {
+  position: relative;
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
@@ -1071,20 +1074,37 @@ kbd {
   pointer-events: auto;
 }
 
+/* The photo is the top of the card and scrolls away with it. Its lower part fades into the card's
+   glass, and the callsign, type and airports sit where it fades, in the card's own colours. */
 .flight-hero {
   position: relative;
-  flex-shrink: 0;
-  height: clamp(196px, 58vw, 236px);
+  height: clamp(236px, 64vw, 284px);
   overflow: hidden;
-  color: #fff;
+  color: var(--label);
   cursor: grab;
+}
+
+.hero-photo {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 82%;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(180deg, #000 40%, transparent 90%);
+  mask-image: linear-gradient(180deg, #000 40%, transparent 90%);
+}
+
+/* A light shade at the very top keeps the grip and the photo credit readable. */
+.hero-photo::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.24), transparent 32%);
 }
 
 /* Until (or unless) a photo arrives: the aircraft's own silhouette against the sky. */
 .hero-art {
   position: absolute;
   inset: 0;
-  pointer-events: none;
   background: radial-gradient(circle at 12% 4%, rgba(255, 251, 232, 0.75), transparent 55%),
     radial-gradient(ellipse 30% 26% at 8% 100%, rgba(255, 255, 255, 0.7), transparent),
     radial-gradient(ellipse 30% 26% at 55% 102%, rgba(255, 255, 255, 0.7), transparent),
@@ -1094,7 +1114,7 @@ kbd {
 
 .hero-art svg {
   position: absolute;
-  top: 40%;
+  top: 44%;
   left: 64%;
   width: auto;
   height: 125%;
@@ -1103,36 +1123,27 @@ kbd {
   filter: drop-shadow(0 2px 5px rgba(20, 40, 70, 0.3));
 }
 
-.flight-hero img {
+.hero-photo img {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center 40%;
   opacity: 0;
   transition: opacity 0.4s ease;
-  pointer-events: none; /* a press is a drag of the card, never a drag of the picture */
   -webkit-user-drag: none;
 }
 
-.flight-hero.has-photo img {
+.flight-hero.has-photo .hero-photo img {
   opacity: 1;
-}
-
-/* A soft shade top and bottom keeps the white text and grip readable on any photo. */
-.flight-hero::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.2), transparent 24%, transparent 36%, rgba(0, 0, 0, 0.64));
-  pointer-events: none;
 }
 
 .hero-grip {
   position: absolute;
   top: 0;
   left: 50%;
-  z-index: 1;
+  z-index: 2;
   display: flex;
   justify-content: center;
   width: 96px;
@@ -1147,8 +1158,14 @@ kbd {
   width: 36px;
   height: 5px;
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.75);
+  background: rgba(255, 255, 255, 0.8);
   box-shadow: 0 0 6px rgba(0, 0, 0, 0.25);
+  transition: background-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.flight.past-photo .hero-grip span {
+  background: var(--grip);
+  box-shadow: none;
 }
 
 .hero-credit {
@@ -1158,10 +1175,12 @@ kbd {
   z-index: 1;
   max-width: calc(50% - 64px);
   overflow: hidden;
+  color: #fff;
   font-size: 10px;
   white-space: nowrap;
   text-overflow: ellipsis;
-  opacity: 0.75;
+  opacity: 0.8;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
 }
 
 .hero-credit a {
@@ -1179,7 +1198,7 @@ kbd {
   position: absolute;
   top: 12px;
   right: 12px;
-  z-index: 1;
+  z-index: 2;
   display: grid;
   place-items: center;
   width: 30px;
@@ -1212,9 +1231,9 @@ kbd {
   position: absolute;
   left: 20px;
   right: 20px;
-  bottom: 16px;
+  bottom: 14px;
   z-index: 1;
-  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.25);
+  text-shadow: 0 0 12px var(--hero-halo), 0 0 2px var(--hero-halo);
 }
 
 .hero-text h2 {
@@ -1232,9 +1251,9 @@ kbd {
   margin-top: 2px;
   overflow: hidden;
   font-size: 15px;
+  color: var(--label-2);
   white-space: nowrap;
   text-overflow: ellipsis;
-  opacity: 0.88;
 }
 
 .hero-route {
@@ -1264,10 +1283,10 @@ kbd {
   display: block;
   margin-top: 3px;
   overflow: hidden;
+  color: var(--label-2);
   font-size: 12px;
   white-space: nowrap;
   text-overflow: ellipsis;
-  opacity: 0.82;
 }
 
 /* The route line fills in as the flight goes, with the aircraft riding along it. */
@@ -1277,7 +1296,7 @@ kbd {
   height: 2px;
   margin-bottom: 15px;
   border-radius: 1px;
-  background: rgba(255, 255, 255, 0.35);
+  background: var(--fill);
 }
 
 .hero-line i {
@@ -1285,7 +1304,7 @@ kbd {
   inset: 0 auto 0 0;
   width: 0;
   border-radius: 1px;
-  background: #fff;
+  background: var(--label);
 }
 
 .hero-line svg {
@@ -1295,9 +1314,8 @@ kbd {
   width: 16px;
   height: 16px;
   margin: -8px 0 0 -8px;
-  fill: #fff;
+  fill: var(--label);
   transform: rotate(90deg);
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
 }
 
 .flight-body {
@@ -1307,8 +1325,8 @@ kbd {
   overflow: hidden;
 }
 
-.flight-content {
-  padding: 14px 14px max(18px, calc(var(--safe-bottom) + 8px));
+.flight-details {
+  padding: 6px 14px max(18px, calc(var(--safe-bottom) + 8px));
 }
 
 /* Actions: icon over label, as in Apple Maps. */
