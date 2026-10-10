@@ -10,6 +10,7 @@ import { svgIcon, shapeFor, CLASSIC_FILL } from './icons.js?v=14';
 import { shortAlt } from './format.js?v=2';
 import { distanceNm, normalizeLon } from './shared/geo.js';
 import { PROVIDERS } from './shared/providers.js';
+import { vectorStyle, airportBadge, LAND } from './map-style.js?v=1';
 
 const L = window.L;
 const $ = (id) => document.getElementById(id);
@@ -28,9 +29,11 @@ const STREET_TILES = [
 ];
 // Each style also sets the app's appearance (`theme`) and the colour of the route and selection
 // marks drawn over the map (`ink`): satellite imagery is dark, but its menus are white.
+// `vector` names the Apple Maps-style vector map drawn for the style where it is available; the
+// raster `tiles` are the fallback (no WebGL, or the vector tiles cannot be reached).
 const MAP_STYLES = {
-  dark: { tiles: STREET_TILES, dark: true, theme: 'dark', ink: 'dark' }, // street map, darkened with a CSS filter
-  light: { tiles: STREET_TILES, theme: 'light', ink: 'light' },
+  dark: { vector: 'dark', tiles: STREET_TILES, dark: true, theme: 'dark', ink: 'dark' }, // raster darkened with a CSS filter
+  light: { vector: 'light', tiles: STREET_TILES, theme: 'light', ink: 'light' },
   satellite: {
     theme: 'light',
     ink: 'dark',
@@ -45,6 +48,8 @@ const MAP_STYLES = {
 };
 
 const DEFAULT_VIEW = { lat: 51.47, lon: -0.45, zoom: 8 }; // London
+// The Apple Maps-style vector map, being previewed: on with ?map=apple.
+const VECTOR_MAP = new URLSearchParams(location.search).get('map') === 'apple';
 const FAILURES_BEFORE_BANNER = 3;
 const DATA_SOURCE = 'auto'; // the best available network, switching automatically if one fails
 
@@ -86,13 +91,107 @@ function applyTheme(theme) {
   document.querySelector('meta[name="theme-color"]').content = theme === 'light' ? '#ffffff' : '#0e1420';
 }
 
+let glLayer = null; // the vector map, drawn by MapLibre GL inside Leaflet
+let glTheme = null;
+let vectorFailed = false;
+let vectorLib = null;
+
+function webglAvailable() {
+  try {
+    const c = document.createElement('canvas');
+    return Boolean(c.getContext('webgl2') || c.getContext('webgl'));
+  } catch {
+    return false;
+  }
+}
+
+/** MapLibre GL and its Leaflet bridge, loaded only when the vector map is first shown. */
+function loadVectorLib() {
+  const add = (tag, attrs) =>
+    new Promise((resolve, reject) => {
+      const el = Object.assign(document.createElement(tag), attrs);
+      el.onload = resolve;
+      el.onerror = reject;
+      document.head.append(el);
+    });
+  vectorLib ??= Promise.all([
+    add('link', { rel: 'stylesheet', href: 'vendor/maplibre-gl/maplibre-gl.css' }),
+    add('script', { src: 'vendor/maplibre-gl/maplibre-gl.js' }).then(() => add('script', { src: 'vendor/maplibre-gl/leaflet-maplibre-gl.js' })),
+  ]);
+  return vectorLib;
+}
+
+function removeBaseMap() {
+  if (tileLayer) map.removeLayer(tileLayer);
+  if (glLayer) map.removeLayer(glLayer);
+  tileLayer = glLayer = glTheme = null;
+}
+
+async function showVectorMap(theme) {
+  $('map').classList.remove('map-dark');
+  $('map').style.background = LAND[theme];
+  if (glLayer) {
+    if (glTheme !== theme) {
+      glTheme = theme;
+      glLayer.getMaplibreMap().setStyle(vectorStyle(theme));
+    }
+    return;
+  }
+  try {
+    if (!webglAvailable()) throw new Error('WebGL is not available');
+    await loadVectorLib();
+  } catch {
+    vectorFailed = true;
+    return applyMapStyle();
+  }
+  // The choice may have changed while the library loaded; the newer call has handled it.
+  if (MAP_STYLES[settings.mapStyle].vector !== theme || glLayer) return;
+  removeBaseMap();
+  glTheme = theme;
+  glLayer = L.maplibreGL({
+    style: vectorStyle(theme),
+    pixelRatio: Math.min(2, window.devicePixelRatio || 1), // crisp enough, and far lighter than 3×
+    updateInterval: 16,
+    fadeDuration: 200,
+  });
+  glLayer.addTo(map);
+  const gl = glLayer.getMaplibreMap();
+  gl.on('styleimagemissing', (e) => {
+    const m = /^airport-badge-(light|dark)$/.exec(e.id);
+    if (!m || gl.hasImage(e.id)) return;
+    const badge = airportBadge(m[1]);
+    gl.addImage(e.id, badge.image, { pixelRatio: badge.pixelRatio });
+  });
+  // Vector tiles that cannot be reached (the tile index fails, tiles keep failing, or nothing has
+  // arrived after a while) mean the server is down or blocked: use the raster tiles instead.
+  let loaded = 0;
+  let errors = 0;
+  const fallBack = () => {
+    if (loaded > 0 || vectorFailed || gl !== glLayer?.getMaplibreMap()) return;
+    vectorFailed = true;
+    applyMapStyle();
+  };
+  gl.on('sourcedata', (e) => {
+    if (e.tile) loaded++;
+  });
+  gl.on('error', (e) => {
+    if ((e.sourceId && !e.tile) || ++errors >= 4) fallBack();
+  });
+  setTimeout(fallBack, 15000);
+}
+
 function applyMapStyle(nextServer = false) {
   const style = MAP_STYLES[settings.mapStyle];
+  applyTheme(style.theme);
+  if (style.vector && VECTOR_MAP && !vectorFailed) {
+    showVectorMap(style.vector);
+    return;
+  }
   tileIndex = nextServer ? tileIndex + 1 : 0;
   const t = style.tiles[tileIndex];
-  if (tileLayer) map.removeLayer(tileLayer);
+  removeBaseMap();
+  $('map').style.background = '';
   $('map').classList.toggle('map-dark', Boolean(style.dark));
-  applyTheme(style.theme);
   let loaded = 0;
   let failed = 0;
   tileLayer = L.tileLayer(t.url, {
