@@ -7,7 +7,7 @@ import { createDataSource } from './datasource.js?v=8';
 import { SimSource } from './sim.js';
 import { loadSettings, saveSettings, makeFilter, DEFAULTS } from './settings.js';
 import { svgIcon, shapeFor, CLASSIC_FILL } from './icons.js?v=13';
-import { startLiquidGlass } from './liquid-glass.js?v=2';
+import { startLiquidGlass } from './liquid-glass.js?v=3';
 import { shortAlt } from './format.js';
 import { distanceNm, normalizeLon } from './shared/geo.js';
 import { PROVIDERS } from './shared/providers.js';
