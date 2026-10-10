@@ -6,8 +6,6 @@ import {
   shadowSprite,
   rotorFor,
   rotorSprite,
-  lightsFor,
-  glowSprite,
   SHADOW_PAD,
   shapeFor,
   shapeScale,
@@ -17,7 +15,7 @@ import {
   EMERGENCY_FILL,
   GROUND_FILL,
   REALISTIC,
-} from './icons.js?v=9';
+} from './icons.js?v=10';
 import { destinationPoint, greatCirclePoints } from './shared/geo.js';
 import { isEmergency, shortAlt } from './format.js';
 
@@ -159,7 +157,7 @@ export const AircraftLayer = L.Layer.extend({
       if (hit.ac !== selected) this._drawPlane(ctx, hit, o, iconPx, dpr, t, false);
     }
     if (selHit) this._drawPlane(ctx, selHit, o, iconPx, dpr, t, true);
-    this._drawLife(ctx, hits, selected, iconPx, dpr, t, zoom);
+    this._drawLife(ctx, hits, selected, iconPx, dpr, t);
 
     if (o.labels && (zoom >= 7 || hits.length < 250)) this._drawLabels(ctx, hits, selected, o, zoom, iconPx);
   },
@@ -188,47 +186,23 @@ export const AircraftLayer = L.Layer.extend({
     ctx.setTransform(c * dpr, s * dpr, -s * dpr, c * dpr, x * dpr, y * dpr);
   },
 
-  // Spinning helicopter rotors, plus strobes and beacons flashing like the real thing: white
-  // double-flash wingtip and tail strobes, a red rotating beacon. Each aircraft has its own rhythm.
-  _drawLife(ctx, hits, selected, iconPx, dpr, t, zoom) {
-    const lights = zoom >= 7 && hits.length <= 600;
+  // Spinning helicopter rotors. Each aircraft has its own phase so they don't turn in step.
+  _drawLife(ctx, hits, selected, iconPx, dpr, t) {
     for (const hit of hits) {
       const { ac, x, y } = hit;
+      const rotor = rotorFor(ac._shape);
+      if (!rotor) continue;
       const px = this._size(ac, iconPx, ac === selected);
       if (ac._phase == null) ac._phase = (parseInt(ac.hex.replace(/[^0-9a-f]/g, '').slice(-4) || '0', 16) % 997) / 997;
-      const rotor = rotorFor(ac._shape);
-      if (rotor) {
-        const img = rotorSprite(ac._shape, px, dpr);
-        const d = img.width / dpr;
-        const spin = -(t / 1000) * Math.PI * 2 * 1.8 + ac._phase * 6.28;
-        rotor.hubs.forEach(([hx, hy], i) => {
-          this._rotate(ctx, ac, x, y, dpr);
-          ctx.translate(hx * px, hy * px);
-          ctx.rotate(i % 2 ? -spin : spin);
-          ctx.drawImage(img, -d / 2, -d / 2, d, d);
-        });
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      }
-      if (!lights) continue;
-      const pos = lightsFor(ac._shape);
-      const strobeT = (t + ac._phase * 1300) % 1300;
-      const strobe = !ac.onGround && (strobeT < 45 || (strobeT > 130 && strobeT < 175));
-      const beacon = (t + ac._phase * 777) % 1000 < 80;
-      if (!strobe && !beacon) continue;
-      this._rotate(ctx, ac, x, y, dpr);
-      if (strobe) {
-        const img = glowSprite('rgba(255,255,255,1)', dpr);
-        const s = Math.max(9, px * 0.45);
-        for (const k of ['left', 'right', 'tail']) {
-          if (!pos[k]) continue;
-          ctx.drawImage(img, pos[k][0] * px - s / 2, pos[k][1] * px - s / 2, s, s);
-        }
-      }
-      if (beacon && pos.beacon) {
-        const img = glowSprite('rgba(255,40,40,1)', dpr);
-        const s = Math.max(8, px * 0.4);
-        ctx.drawImage(img, pos.beacon[0] * px - s / 2, pos.beacon[1] * px - s / 2, s, s);
-      }
+      const img = rotorSprite(ac._shape, px, dpr);
+      const d = img.width / dpr;
+      const spin = -(t / 1000) * Math.PI * 2 * 1.8 + ac._phase * 6.28;
+      rotor.hubs.forEach(([hx, hy], i) => {
+        this._rotate(ctx, ac, x, y, dpr);
+        ctx.translate(hx * px, hy * px);
+        ctx.rotate(i % 2 ? -spin : spin);
+        ctx.drawImage(img, -d / 2, -d / 2, d, d);
+      });
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
   },
