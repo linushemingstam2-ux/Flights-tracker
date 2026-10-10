@@ -2,7 +2,7 @@
 
 import { AircraftStore } from './store.js';
 import { AircraftLayer } from './aircraft-layer.js?v=20';
-import { Panel } from './panel.js?v=17';
+import { Panel } from './panel.js?v=18';
 import { createDataSource } from './datasource.js?v=8';
 import { SimSource } from './sim.js';
 import { loadSettings, saveSettings, makeFilter, DEFAULTS } from './settings.js';
@@ -48,8 +48,8 @@ const MAP_STYLES = {
 };
 
 const DEFAULT_VIEW = { lat: 51.47, lon: -0.45, zoom: 8 }; // London
-// The Apple Maps-style vector map, being previewed: on with ?map=apple.
-const VECTOR_MAP = new URLSearchParams(location.search).get('map') === 'apple';
+// The Apple Maps-style vector map is the map; ?map=classic shows the older raster street map.
+const VECTOR_MAP = new URLSearchParams(location.search).get('map') !== 'classic';
 const FAILURES_BEFORE_BANNER = 3;
 const DATA_SOURCE = 'auto'; // the best available network, switching automatically if one fails
 

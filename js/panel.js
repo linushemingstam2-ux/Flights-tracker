@@ -52,6 +52,7 @@ class CardMotion {
     this.y = 0;
     this.s = 0;
     this.H = 0;
+    this.heroH = 0;
     this.maxS = 0;
     this.det = { full: 0, half: 0, peek: 0, closed: 0 };
     this.anim = { raf: 0, last: 0, y: null, s: null };
@@ -72,10 +73,12 @@ class CardMotion {
     this.H = Math.max(200, window.innerHeight - bottom - top);
     const innerH = `${this.H}px`;
     if (this.inner.style.height !== innerH) this.inner.style.height = innerH;
-    const heroH = Math.min(this.hero.offsetHeight, this.H);
-    const half = Math.min(this.H, heroH + this.more.offsetTop - 2);
-    this.det = { full: 0, half: this.H - half, peek: this.H - heroH, closed: this.H + 30 };
-    this.maxS = Math.max(0, this.content.offsetHeight - (this.H - heroH));
+    // The photo is the top of the scrolling content: the small card shows just the photo, the
+    // half card everything above the grouped details.
+    this.heroH = Math.min(this.hero.offsetHeight, this.H);
+    const half = Math.min(this.H, this.more.offsetTop - 2);
+    this.det = { full: 0, half: this.H - half, peek: this.H - this.heroH, closed: this.H + 30 };
+    this.maxS = Math.max(0, this.content.offsetHeight - this.H);
   }
 
   paint() {
@@ -85,6 +88,7 @@ class CardMotion {
     this.el.style.height = `${Math.max(shown, small).toFixed(1)}px`;
     this.el.style.transform = shown < small ? `translate3d(0, ${(small - shown).toFixed(1)}px, 0)` : '';
     this.content.style.transform = this.s ? `translate3d(0, ${(-this.s).toFixed(1)}px, 0)` : '';
+    this.el.classList.toggle('past-photo', this.s > this.heroH * 0.55);
     const dim = clamp((this.det.half - y) / Math.max(1, this.det.half - this.det.full), 0, 1);
     this.scrim.style.opacity = (dim * 0.3).toFixed(3);
     this.scrim.classList.toggle('active', dim > 0.6);
@@ -101,6 +105,7 @@ class CardMotion {
     this.content.style.transform = '';
     this.scrim.style.opacity = '';
     this.scrim.classList.remove('active');
+    this.el.classList.remove('past-photo');
   }
 
   /** Rises from below the screen, or from wherever it is, to the small card. */
@@ -371,10 +376,13 @@ export class Panel {
     $('p-follow').addEventListener('click', onFollow);
     $('p-zoom').addEventListener('click', onZoom);
 
-    // Tapping the photo or its grip steps through the heights.
+    // Tapping the photo or the grip steps through the heights.
     $('p-hero').addEventListener('click', (e) => {
-      if (!this.motion.active || e.target.closest('a, button:not(#p-handle)')) return;
+      if (!this.motion.active || e.target.closest('a, button')) return;
       this.motion.cycle();
+    });
+    $('p-handle').addEventListener('click', () => {
+      if (this.motion.active) this.motion.cycle();
     });
 
     const photo = $('p-photo');
