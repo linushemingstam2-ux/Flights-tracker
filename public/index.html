@@ -14,7 +14,7 @@
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="favicon.svg" />
     <link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
-    <link rel="stylesheet" href="css/app.css?v=10" />
+    <link rel="stylesheet" href="css/app.css?v=11" />
   </head>
   <body>
     <main id="map" aria-label="Map of live air traffic"></main>
@@ -53,11 +53,6 @@
       </div>
     </div>
 
-    <div id="legend" class="legend" hidden aria-label="Altitude colours">
-      <div class="legend-bar"></div>
-      <div class="legend-labels"><span>0</span><span>10k</span><span>20k</span><span>30k</span><span>40k ft</span></div>
-    </div>
-
     <div id="tooltip" class="tooltip" hidden>
       <strong id="tt-callsign"></strong>
       <span id="tt-type"></span>
@@ -67,48 +62,20 @@
 
     <!-- Round buttons on the side: each opens its page; the last one finds you on the map -->
     <nav class="fabs" aria-label="Map tools">
-      <button id="btn-layers" class="fab" type="button" data-sheet="layers" aria-expanded="false" aria-controls="layers" aria-label="Map" title="Map">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3.5 8.5 4.75L12 13 3.5 8.25 12 3.5Z"/><path d="m3.5 12.25 8.5 4.75 8.5-4.75"/><path d="m3.5 16.25 8.5 4.75 8.5-4.75"/></svg>
+      <button id="btn-settings" class="fab" type="button" data-sheet="settings" aria-expanded="false" aria-controls="settings" aria-label="Settings" title="Settings">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.53 4.75L10.76 2.48L13.24 2.48L13.47 4.75L16.09 5.83L17.85 4.39L19.61 6.15L18.17 7.91L19.25 10.53L21.52 10.76L21.52 13.24L19.25 13.47L18.17 16.09L19.61 17.85L17.85 19.61L16.09 18.17L13.47 19.25L13.24 21.52L10.76 21.52L10.53 19.25L7.91 18.17L6.15 19.61L4.39 17.85L5.83 16.09L4.75 13.47L2.48 13.24L2.48 10.76L4.75 10.53L5.83 7.91L4.39 6.15L6.15 4.39L7.91 5.83Z"/><circle cx="12" cy="12" r="3.1"/></svg>
       </button>
       <button id="btn-filters" class="fab" type="button" data-sheet="filters" aria-expanded="false" aria-controls="filters" aria-label="Filters" title="Filters">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2.25"/><circle cx="9" cy="17" r="2.25"/></svg>
         <i id="filter-badge" class="badge" hidden></i>
-      </button>
-      <button id="btn-settings" class="fab" type="button" data-sheet="settings" aria-expanded="false" aria-controls="settings" aria-label="Settings" title="Settings">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.53 4.75L10.76 2.48L13.24 2.48L13.47 4.75L16.09 5.83L17.85 4.39L19.61 6.15L18.17 7.91L19.25 10.53L21.52 10.76L21.52 13.24L19.25 13.47L18.17 16.09L19.61 17.85L17.85 19.61L16.09 18.17L13.47 19.25L13.24 21.52L10.76 21.52L10.53 19.25L7.91 18.17L6.15 19.61L4.39 17.85L5.83 16.09L4.75 13.47L2.48 13.24L2.48 10.76L4.75 10.53L5.83 7.91L4.39 6.15L6.15 4.39L7.91 5.83Z"/><circle cx="12" cy="12" r="3.1"/></svg>
       </button>
       <button id="btn-locate" class="fab fab-locate" type="button" aria-label="Show my location" title="My location">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.5 4.5 4 11.2l6.6 2.2 2.2 6.6 6.7-15.5Z"/></svg>
       </button>
     </nav>
 
-    <!-- Pages (map, filters, settings): slide up on phones, pop out beside the buttons on wide screens -->
+    <!-- Pages (settings, filters): slide up on phones, pop out beside the buttons on wide screens -->
     <div id="sheet-backdrop" class="backdrop" hidden></div>
-
-    <section id="layers" class="sheet" hidden aria-label="Map">
-      <div class="sheet-grip" aria-hidden="true"><span></span></div>
-      <header class="sheet-head">
-        <h2>Map</h2>
-        <button class="icon-btn sheet-close" type="button" aria-label="Close">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg>
-        </button>
-      </header>
-      <div id="s-map" class="style-cards" role="radiogroup" aria-label="Map style">
-        <button type="button" role="radio" data-value="dark" aria-checked="false"><i class="swatch swatch-dark"></i>Dark</button>
-        <button type="button" role="radio" data-value="light" aria-checked="false"><i class="swatch swatch-light"></i>Light</button>
-        <button type="button" role="radio" data-value="satellite" aria-checked="false"><i class="swatch swatch-satellite"></i>Satellite</button>
-      </div>
-      <div class="field">
-        <span>Aircraft colours</span>
-        <div id="s-color" class="segmented" role="radiogroup" aria-label="Aircraft colours">
-          <button type="button" role="radio" data-value="classic" aria-checked="false">Classic</button>
-          <button type="button" role="radio" data-value="realistic" aria-checked="false">Realistic</button>
-          <button type="button" role="radio" data-value="altitude" aria-checked="false">Altitude</button>
-        </div>
-      </div>
-      <label class="toggle"><span>Callsign labels</span><input id="s-labels" type="checkbox" /></label>
-      <label class="toggle"><span>Trails for all aircraft</span><input id="s-trails" type="checkbox" /></label>
-    </section>
 
     <section id="filters" class="sheet" hidden aria-label="Filters">
       <div class="sheet-grip" aria-hidden="true"><span></span></div>
@@ -140,17 +107,13 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg>
         </button>
       </header>
-      <label class="field">
-        <span>Data source</span>
-        <select id="s-source">
-          <option value="auto">Automatic (best available)</option>
-          <option value="adsblol">adsb.lol</option>
-          <option value="adsbfi">adsb.fi</option>
-          <option value="opensky">OpenSky Network</option>
-        </select>
-      </label>
-      <label class="toggle"><span>Metric units (m, km/h)</span><input id="s-metric" type="checkbox" /></label>
-      <label class="toggle"><span>Demo mode (simulated traffic)</span><input id="s-demo" type="checkbox" /></label>
+      <div id="s-map" class="style-cards" role="radiogroup" aria-label="Map style">
+        <button type="button" role="radio" data-value="dark" aria-checked="false"><i class="swatch swatch-dark"></i>Dark</button>
+        <button type="button" role="radio" data-value="light" aria-checked="false"><i class="swatch swatch-light"></i>Light</button>
+        <button type="button" role="radio" data-value="satellite" aria-checked="false"><i class="swatch swatch-satellite"></i>Satellite</button>
+      </div>
+      <label class="toggle"><span>Callsign labels</span><input id="s-labels" type="checkbox" /></label>
+      <label class="toggle"><span>Trails for all aircraft</span><input id="s-trails" type="checkbox" /></label>
       <p class="about">
         Live positions come from community ADS-B networks
         (<a href="https://adsb.lol" target="_blank" rel="noopener">adsb.lol</a>,
@@ -235,6 +198,6 @@
     </aside>
 
     <script src="vendor/leaflet/leaflet.js"></script>
-    <script type="module" src="js/main.js?v=13"></script>
+    <script type="module" src="js/main.js?v=14"></script>
   </body>
 </html>

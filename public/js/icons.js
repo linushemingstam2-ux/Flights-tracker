@@ -358,11 +358,10 @@ export const CLASSIC_FILL = '#ffc72c';
 export const SELECTED_FILL = '#ff4d3a';
 export const EMERGENCY_FILL = '#ff2d55';
 export const GROUND_FILL = '#a3afbd';
-export const REALISTIC = 'realistic';
 
 const ALT_HUES = [[0, 20], [2000, 32], [4000, 43], [6000, 54], [8000, 72], [10000, 100], [13000, 140], [20000, 190], [30000, 240], [40000, 300]];
 
-export function altitudeHue(alt) {
+function altitudeHue(alt) {
   if (alt <= ALT_HUES[0][0]) return ALT_HUES[0][1];
   for (let i = 1; i < ALT_HUES.length; i++) {
     const [a1, h1] = ALT_HUES[i];
@@ -426,17 +425,7 @@ function tone(c, t) {
 }
 
 /** The palette for one symbol: the body colour plus gentle tone steps for the other parts. */
-function paintFor(fill, military) {
-  if (fill === REALISTIC) {
-    const body = military ? [150, 160, 170] : [247, 248, 250];
-    return {
-      body,
-      wing: military ? [138, 148, 158] : [226, 230, 235],
-      tail: military ? [144, 154, 164] : [234, 237, 241],
-      engine: military ? [112, 120, 130] : [196, 202, 210],
-      fin: military ? [136, 146, 156] : [228, 232, 237],
-    };
-  }
+function paintFor(fill) {
   const c = parseColor(fill);
   return { body: c, wing: tone(c, -0.075), tail: tone(c, -0.05), engine: tone(c, -0.2), fin: tone(c, -0.12) };
 }
@@ -759,10 +748,7 @@ function canvas(size) {
   return c;
 }
 
-/**
- * The aircraft drawn `px` CSS pixels wide (at device pixel ratio `dpr`). `fill` is a colour, or
- * REALISTIC for natural white/grey paint.
- */
+/** The aircraft in colour `fill`, drawn `px` CSS pixels wide (at device pixel ratio `dpr`). */
 export function sprite(id, fill, px, dpr) {
   return cached(`${id}|${fill}|${px}|${dpr}`, () => {
     const g = geometry(id);
@@ -772,7 +758,7 @@ export function sprite(id, fill, px, dpr) {
     ctx.scale(size / BOX, size / BOX);
     const u = BOX / px; // one CSS pixel in sprite units
     const blur = Math.max(1.2, size * 0.035);
-    const paint = paintFor(fill, g.m.military);
+    const paint = paintFor(fill);
     if (g.kind === 'balloon') paintBalloon(ctx, paint, u);
     else if (g.kind === 'ground') paintGround(ctx, paint, u);
     else if (g.kind === 'heli') paintHeli(ctx, g, pathsFor(id, g), paint, u, blur);

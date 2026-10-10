@@ -3,7 +3,7 @@
 
 import { distanceNm } from './shared/geo.js';
 import { flagEmoji } from './shared/countries.js';
-import { svgIcon, shapeFor } from './icons.js?v=12';
+import { svgIcon, shapeFor } from './icons.js?v=13';
 import {
   formatAlt,
   formatSpeed,
@@ -150,14 +150,14 @@ export class Panel {
   }
 
   /** Refresh the live values. `pos` is the current display position. */
-  update(ac, pos, { metric, now }) {
+  update(ac, pos, { now }) {
     setText('p-callsign', ac.callsign || ac.reg || ac.hex.toUpperCase());
     setText('p-airline', this.note || this.airline || ac.desc || ac.operator || (ac.reg && ac.callsign ? ac.reg : ''));
     setText('p-chip', ac.type);
     setText('p-type', ac.desc || ac.type || 'Unknown type');
-    setText('p-alt', formatAlt(ac, metric));
-    setText('p-vrate', ac.onGround ? '—' : formatVRate(ac.vrate, metric));
-    setText('p-speed', formatSpeed(ac.gs, metric));
+    setText('p-alt', formatAlt(ac));
+    setText('p-vrate', ac.onGround ? '—' : formatVRate(ac.vrate));
+    setText('p-speed', formatSpeed(ac.gs));
     setText('p-track', formatTrack(ac.track));
     const sq = ac.squawk ? `${ac.squawk}${EMERGENCY_SQUAWKS[ac.squawk] ? ` · ${EMERGENCY_SQUAWKS[ac.squawk]}` : ''}` : '—';
     setText('p-squawk', ac.emergency && !EMERGENCY_SQUAWKS[ac.squawk] ? `${sq} · ${ac.emergency}` : sq);
@@ -180,8 +180,8 @@ export class Panel {
       const pct = Math.round((flown / Math.max(1, flown + left)) * 100);
       $('p-progress').style.width = `${pct}%`;
       $('p-progress-plane').style.left = `${pct}%`;
-      setText('p-flown', `${formatDistance(flown, metric)} flown`);
-      setText('p-left', `${formatDistance(left, metric)} to go`);
+      setText('p-flown', `${formatDistance(flown)} flown`);
+      setText('p-left', `${formatDistance(left)} to go`);
       // Callsign-based routes can be stale; say so when the aircraft is far off the line.
       $('p-route-warning').hidden = flown + left <= total * 1.25 + 60;
     }

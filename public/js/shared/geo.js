@@ -1,7 +1,6 @@
 // Small spherical-geometry helpers. Shared by the browser and the Node server.
 
 export const EARTH_RADIUS_NM = 3440.065;
-export const NM_TO_KM = 1.852;
 export const FT_PER_M = 3.28084;
 export const KT_PER_MS = 1.943844;
 export const FPM_PER_MS = 196.850394;

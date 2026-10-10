@@ -1,34 +1,29 @@
-// Display formatting for aircraft values, in aviation (ft/kt) or metric units.
-
-import { NM_TO_KM } from './shared/geo.js';
+// Display formatting for aircraft values, in aviation units (ft, kt, nm).
 
 const nf0 = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
 
-export function formatAlt(ac, metric) {
+export function formatAlt(ac) {
   if (ac.onGround) return 'On ground';
   if (ac.alt == null) return '—';
-  return metric ? `${nf0.format(ac.alt * 0.3048)} m` : `${nf0.format(ac.alt)} ft`;
+  return `${nf0.format(ac.alt)} ft`;
 }
 
 /** Compact altitude for map labels, e.g. "FL350" or "4,500". */
-export function shortAlt(ac, metric) {
+export function shortAlt(ac) {
   if (ac.onGround) return 'GND';
   if (ac.alt == null) return '';
-  if (metric) return `${nf0.format(ac.alt * 0.3048)}m`;
   return ac.alt >= 18000 ? `FL${String(Math.round(ac.alt / 100)).padStart(3, '0')}` : nf0.format(ac.alt);
 }
 
-export function formatSpeed(kt, metric) {
+export function formatSpeed(kt) {
   if (kt == null) return '—';
-  return metric ? `${nf0.format(kt * NM_TO_KM)} km/h` : `${nf0.format(kt)} kt`;
+  return `${nf0.format(kt)} kt`;
 }
 
-export function formatVRate(fpm, metric) {
+export function formatVRate(fpm) {
   if (fpm == null) return '—';
   const arrow = fpm > 250 ? '↑ ' : fpm < -250 ? '↓ ' : '';
-  return metric
-    ? `${arrow}${nf0.format(fpm * 0.00508)} m/s`
-    : `${arrow}${nf0.format(fpm)} ft/min`;
+  return `${arrow}${nf0.format(fpm)} ft/min`;
 }
 
 export function formatTrack(deg) {
@@ -37,9 +32,9 @@ export function formatTrack(deg) {
   return `${Math.round(deg) % 360}° ${dirs[Math.round(deg / 45) % 8]}`;
 }
 
-export function formatDistance(nm, metric) {
+export function formatDistance(nm) {
   if (nm == null || !Number.isFinite(nm)) return '—';
-  return metric ? `${nf0.format(nm * NM_TO_KM)} km` : `${nf0.format(nm)} nm`;
+  return `${nf0.format(nm)} nm`;
 }
 
 export function formatCoord(lat, lon) {
