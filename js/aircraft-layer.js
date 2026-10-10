@@ -23,8 +23,8 @@ const L = window.L;
 // Colours for what is drawn over the map, to suit the dark or light appearance.
 const INK = {
   dark: {
-    ring: 'rgba(255, 255, 255, 0.85)',
-    ringFill: 'rgba(255, 255, 255, 0.16)',
+    lensTop: 'rgba(255, 255, 255, 0.05)',
+    lensEdge: 'rgba(255, 255, 255, 0.22)',
     route: 'rgba(255, 255, 255, 0.55)',
     dot: '#0d1520',
     dotEdge: '#ffffff',
@@ -33,8 +33,8 @@ const INK = {
     coverage: 'rgba(255, 199, 44, 0.45)',
   },
   light: {
-    ring: 'rgba(15, 23, 42, 0.6)',
-    ringFill: 'rgba(15, 23, 42, 0.07)',
+    lensTop: 'rgba(255, 255, 255, 0.3)',
+    lensEdge: 'rgba(255, 255, 255, 0.6)',
     route: 'rgba(15, 23, 42, 0.5)',
     dot: '#ffffff',
     dotEdge: '#0f172a',
@@ -50,6 +50,7 @@ export const AircraftLayer = L.Layer.extend({
     this.getOptions = getOptions; // () => { ink, allTrails, filter, route, coverage }
     this._hits = [];
     this._frame = this._frame.bind(this);
+    this._selScale = 1.15;
   },
 
   onAdd(map) {
@@ -145,6 +146,14 @@ export const AircraftLayer = L.Layer.extend({
     const pad = 40;
     const project = (lat, lon) => map.latLngToContainerPoint([lat, lon]);
     const selected = store.selectedHex ? store.get(store.selectedHex) : null;
+    // A newly selected aircraft pops up on a spring, as places do in Apple Maps.
+    const selHex = selected?.hex ?? null;
+    if (selHex !== this._selHex) {
+      this._selHex = selHex;
+      this._selAt = t;
+    }
+    const dt = t - (this._selAt ?? -1e9);
+    this._selScale = 1.15 * (1 - 0.4 * Math.exp(-dt / 110) * Math.cos(dt / 55));
 
     if (o.coverage) this._drawCoverage(ctx, o.coverage, project);
 
@@ -192,7 +201,7 @@ export const AircraftLayer = L.Layer.extend({
       ac._shapeKey = ac.type + ac.category;
       ac._shape = shapeFor(ac);
     }
-    return Math.round(iconPx * shapeScale(ac._shape) * (isSelected ? 1.15 : 1));
+    return Math.round(iconPx * shapeScale(ac._shape) * (isSelected ? this._selScale : 1));
   },
 
   _rotate(ctx, ac, x, y, dpr) {
@@ -250,13 +259,24 @@ export const AircraftLayer = L.Layer.extend({
       ctx.stroke();
     }
     if (isSelected) {
+      // A glass lens under the selected aircraft: clear in the middle, brighter towards the rim,
+      // edged with a fine white line that floats on a soft shadow.
+      const r = px * 0.74;
+      const lens = ctx.createRadialGradient(x, y - r * 0.35, r * 0.15, x, y, r);
+      lens.addColorStop(0, this._ink.lensTop);
+      lens.addColorStop(1, this._ink.lensEdge);
       ctx.beginPath();
-      ctx.arc(x, y, px * 0.72, 0, Math.PI * 2);
-      ctx.fillStyle = this._ink.ringFill;
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fillStyle = lens;
       ctx.fill();
-      ctx.strokeStyle = this._ink.ring;
-      ctx.lineWidth = 1.5;
+      ctx.save();
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.35)';
+      ctx.shadowBlur = 8;
+      ctx.shadowOffsetY = 2;
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
+      ctx.lineWidth = 2;
       ctx.stroke();
+      ctx.restore();
     }
 
     this._rotate(ctx, ac, x, y, dpr);
