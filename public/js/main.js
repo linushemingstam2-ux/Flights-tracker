@@ -1,12 +1,13 @@
 // Flight radar app: map, live polling, selection, search, filters and settings.
 
 import { AircraftStore } from './store.js';
-import { AircraftLayer } from './aircraft-layer.js?v=16';
-import { Panel } from './panel.js?v=13';
+import { AircraftLayer } from './aircraft-layer.js?v=17';
+import { Panel } from './panel.js?v=14';
 import { createDataSource } from './datasource.js?v=8';
 import { SimSource } from './sim.js';
 import { loadSettings, saveSettings, makeFilter, DEFAULTS } from './settings.js';
 import { svgIcon, shapeFor, CLASSIC_FILL } from './icons.js?v=13';
+import { startLiquidGlass } from './liquid-glass.js?v=2';
 import { shortAlt } from './format.js';
 import { distanceNm, normalizeLon } from './shared/geo.js';
 import { PROVIDERS } from './shared/providers.js';
@@ -15,10 +16,11 @@ const L = window.L;
 const $ = (id) => document.getElementById(id);
 
 // Map backgrounds, all usable without an API key. Each style lists backup tile servers,
-// tried in order when the current one fails to load.
+// tried in order when the current one fails to load. Servers marked `cors` let the page read
+// their pixels, which Liquid Glass needs to bend the map; with the others it falls back to CSS.
 const OSM_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 const STREET_TILES = [
-  { url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', attribution: OSM_ATTRIBUTION },
+  { url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', attribution: OSM_ATTRIBUTION, cors: true },
   { url: 'https://tile.openstreetmap.de/{z}/{x}/{y}.png', attribution: OSM_ATTRIBUTION },
   {
     url: 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
@@ -38,6 +40,7 @@ const MAP_STYLES = {
       {
         url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
         attribution: 'Imagery &copy; Esri, Maxar, Earthstar Geographics',
+        cors: true,
       },
       ...STREET_TILES,
     ],
@@ -100,6 +103,7 @@ function applyMapStyle(nextServer = false) {
     subdomains: t.subdomains || 'abc',
     maxZoom: 18,
     maxNativeZoom: 18,
+    crossOrigin: t.cors ? 'anonymous' : false,
   });
   tileLayer.on('tileload', () => loaded++);
   // A server that keeps failing before any tile has loaded is down or blocked: use the next one.
@@ -118,6 +122,11 @@ const layer = new AircraftLayer(store, () => ({
   coverage,
 }));
 layer.addTo(map);
+
+// Real, refracting Liquid Glass where the device can draw it. ?glass=off shows the CSS glass
+// instead; ?glass=on keeps the real glass even on a device that seems too slow for it.
+const glassMode = new URLSearchParams(location.search).get('glass');
+if (glassMode !== 'off') startLiquidGlass({ map, layer, keepOn: glassMode === 'on' });
 
 const panel = new Panel({
   onClose: () => deselect(),
