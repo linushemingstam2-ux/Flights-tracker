@@ -50,6 +50,20 @@ export function formatAgo(ms) {
   return m < 60 ? `${m}m ${s % 60}s ago` : `${Math.floor(m / 60)}h ${m % 60}m ago`;
 }
 
+// Maker abbreviations that stay in capitals when a type name is tidied up.
+const ACRONYMS = new Set(['ATR', 'BAE', 'CASA', 'DHC', 'IAI', 'MBB', 'PZL', 'SIAI', 'TBM']);
+
+/** A readable aircraft type: "AIRBUS A-350-1000" becomes "Airbus A-350-1000". */
+export function formatType(desc, type) {
+  const text = (desc || '').trim();
+  if (!text) return type || '';
+  if (text !== text.toUpperCase()) return text; // already written in mixed case
+  return text
+    .split(/\s+/)
+    .map((w) => (/\d/.test(w) || ACRONYMS.has(w) ? w : w[0] + w.slice(1).toLowerCase()))
+    .join(' ');
+}
+
 export const EMERGENCY_SQUAWKS = { 7500: 'Hijack', 7600: 'Radio failure', 7700: 'Emergency' };
 
 export function isEmergency(ac) {

@@ -1020,7 +1020,9 @@ kbd {
   stroke-linecap: round;
 }
 
-/* ── Selected flight: a floating card, laid out like an Apple Maps place card ── */
+/* ── Selected flight: a floating card that follows the finger ──────────
+   Small, it is just the aircraft's photo with its callsign, type and airports. Dragged up, the
+   photo stays on top and the details appear below it. Its height is set by script. */
 
 .flight {
   position: fixed;
@@ -1030,94 +1032,280 @@ kbd {
   z-index: 1200;
   display: flex;
   flex-direction: column;
-  max-height: calc(88% - var(--safe-top));
-  padding-bottom: max(8px, calc(var(--safe-bottom) - var(--inset)));
+  height: 220px;
+  overflow: hidden;
   border-radius: var(--radius-sheet);
-  animation: sheet-in 0.55s var(--ease-sheet);
-}
-
-.flight > .sheet-grip,
-.flight-head {
-  touch-action: none; /* swipe up/down is handled in script */
-  user-select: none; /* a text selection would turn the next swipe into a drag */
+  transition: none; /* its size and position are animated by script, frame by frame */
+  touch-action: none; /* dragging is handled in script */
+  user-select: none; /* a text selection would turn the next drag into a selection */
   -webkit-user-select: none;
 }
 
 .fabs,
-.sheet-grip,
 .flight-actions {
   user-select: none;
   -webkit-user-select: none;
 }
 
-.flight-head {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 0 16px 14px 18px;
+/* Dims the map while the card is at full height; tapping it brings the card back down. */
+.flight-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 1199;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
 }
 
-.flight-icon {
+.flight-scrim.active {
+  pointer-events: auto;
+}
+
+.flight-hero {
+  position: relative;
+  flex-shrink: 0;
+  height: clamp(196px, 58vw, 236px);
+  overflow: hidden;
+  color: #fff;
+  cursor: grab;
+}
+
+/* Until (or unless) a photo arrives: the aircraft's own silhouette against the sky. */
+.hero-art {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 12% 4%, rgba(255, 251, 232, 0.75), transparent 55%),
+    radial-gradient(ellipse 30% 26% at 8% 100%, rgba(255, 255, 255, 0.7), transparent),
+    radial-gradient(ellipse 30% 26% at 55% 102%, rgba(255, 255, 255, 0.7), transparent),
+    radial-gradient(ellipse 30% 26% at 96% 100%, rgba(255, 255, 255, 0.7), transparent),
+    linear-gradient(180deg, #2d6cbd, #6aa3de 62%, #bcd8f3);
+}
+
+.hero-art svg {
+  position: absolute;
+  top: 40%;
+  left: 64%;
+  width: auto;
+  height: 125%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%) rotate(64deg);
+  filter: drop-shadow(0 2px 5px rgba(20, 40, 70, 0.3));
+}
+
+.flight-hero img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none; /* a press is a drag of the card, never a drag of the picture */
+  -webkit-user-drag: none;
+}
+
+.flight-hero.has-photo img {
+  opacity: 1;
+}
+
+/* A soft shade top and bottom keeps the white text and grip readable on any photo. */
+.flight-hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.2), transparent 24%, transparent 36%, rgba(0, 0, 0, 0.64));
+  pointer-events: none;
+}
+
+.hero-grip {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  z-index: 1;
+  display: flex;
+  justify-content: center;
+  width: 96px;
+  margin-left: -48px;
+  padding: 7px 0 12px;
+  border: 0;
+  background: none;
+  cursor: grab;
+}
+
+.hero-grip span {
+  width: 36px;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.75);
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.25);
+}
+
+.hero-credit {
+  position: absolute;
+  top: 12px;
+  left: 20px;
+  z-index: 1;
+  max-width: calc(50% - 64px);
+  overflow: hidden;
+  font-size: 10px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  opacity: 0.75;
+}
+
+.hero-credit a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.flight-hero:not(.has-photo) .hero-credit {
+  display: none;
+}
+
+/* Phones close the card by swiping it down, so the button is only shown on wide screens (and to
+   keyboard users who tab to it). */
+.hero-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 1;
   display: grid;
   place-items: center;
-  flex-shrink: 0;
-  width: 46px;
-  height: 46px;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 25%, rgba(255, 255, 255, 0.55), transparent 55%), var(--tint);
-  box-shadow: inset 0 -2px 4px rgba(120, 80, 0, 0.25), 0 1px 3px rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.32);
+  color: #fff;
+  cursor: pointer;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
 }
 
-.flight-icon svg {
-  display: block;
-  width: 28px;
-  height: 28px;
-  transform: rotate(45deg);
+.hero-close:not(:focus-visible) {
+  opacity: 0;
+  pointer-events: none;
 }
 
-.flight-icon path {
-  fill: var(--tint-ink);
-  stroke: none;
+.hero-close svg {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.6;
+  stroke-linecap: round;
 }
 
-.flight-title {
-  min-width: 0;
+.hero-text {
+  position: absolute;
+  left: 20px;
+  right: 20px;
+  bottom: 16px;
+  z-index: 1;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.25);
 }
 
-.flight-title h2 {
+.hero-text h2 {
   margin: 0;
-  font-size: 28px;
-  font-weight: 700;
-  line-height: 1.1;
-}
-
-.flight-sub {
-  margin-top: 1px;
-  color: var(--label-2);
-  font-size: 15px;
-  white-space: nowrap;
   overflow: hidden;
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
   text-overflow: ellipsis;
 }
 
-.chip {
-  margin-left: auto;
-  padding: 5px 11px;
-  border-radius: 999px;
-  background: var(--fill-2);
-  font-size: 13px;
-  font-weight: 600;
+.hero-type {
+  margin-top: 2px;
+  overflow: hidden;
+  font-size: 15px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  opacity: 0.88;
 }
 
-.chip:empty {
-  display: none;
+.hero-route {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.hero-route .airport {
+  min-width: 0;
+  max-width: 34%;
+}
+
+.hero-route .airport.right {
+  text-align: right;
+}
+
+.hero-route b {
+  display: block;
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.hero-route span {
+  display: block;
+  margin-top: 3px;
+  overflow: hidden;
+  font-size: 12px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  opacity: 0.82;
+}
+
+/* The route line fills in as the flight goes, with the aircraft riding along it. */
+.hero-line {
+  position: relative;
+  flex: 1;
+  height: 2px;
+  margin-bottom: 15px;
+  border-radius: 1px;
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.hero-line i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0;
+  border-radius: 1px;
+  background: #fff;
+}
+
+.hero-line svg {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  fill: #fff;
+  transform: rotate(90deg);
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
+}
+
+.flight-body {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.flight-content {
+  padding: 14px 14px max(18px, calc(var(--safe-bottom) + 8px));
 }
 
 /* Actions: icon over label, as in Apple Maps. */
 .flight-actions {
   display: flex;
   gap: 8px;
-  padding: 0 14px 14px;
+  margin-bottom: 14px;
 }
 
 .flight-actions .btn,
@@ -1144,26 +1332,16 @@ kbd {
   stroke: none;
 }
 
-.flight-body {
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.flight.expanded .flight-body {
-  overflow-y: auto;
-  overscroll-behavior: contain;
-}
-
-.flight:not(.expanded) .photo,
-.flight:not(.expanded) .flight-more {
-  display: none;
+.route-warning {
+  margin: -4px 4px 12px;
+  font-size: 13px;
+  color: var(--orange);
 }
 
 /* Key facts in one strip, divided by hairlines; it scrolls sideways if a phone is too narrow. */
 .stats {
   display: flex;
-  margin: 0 14px 14px;
+  margin: 0 0 20px;
   padding: 12px 0;
   overflow-x: auto;
   scrollbar-width: none;
@@ -1176,8 +1354,8 @@ kbd {
 }
 
 .stats > div {
-  flex: 1 0 auto;
-  padding: 0 8px;
+  flex: 1 1 auto;
+  padding: 0 7px;
 }
 
 .stats > div:first-child {
@@ -1198,121 +1376,12 @@ kbd {
   white-space: nowrap;
 }
 
-.photo {
-  position: relative;
-  margin: 0 14px 14px;
-  aspect-ratio: 16 / 9;
-  overflow: hidden;
-  border-radius: var(--radius-group);
-  background: var(--fill-3);
-}
-
-.photo img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.photo figcaption {
-  position: absolute;
-  inset: auto 0 0 0;
-  padding: 22px 14px 8px;
-  font-size: 11px;
-  background: linear-gradient(transparent, rgba(0, 0, 0, 0.55));
-}
-
-.photo figcaption a {
-  color: #fff;
-}
-
-.route {
-  margin: 0 14px 14px;
-  padding: 14px 18px 12px;
-  border-radius: var(--radius-group);
-  background: var(--group);
-}
-
-.route-ends {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.airport {
-  min-width: 0;
-}
-
-.airport.right {
-  text-align: right;
-}
-
-.ap-code {
-  font-size: 30px;
-  font-weight: 700;
-  line-height: 1.1;
-}
-
-.ap-city {
-  color: var(--label-2);
-  font-size: 13px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.route-plane {
-  flex-shrink: 0;
-  width: 22px;
-  height: 22px;
-  color: var(--tint);
-}
-
-.progress {
-  position: relative;
-  height: 4px;
-  margin: 14px 4px 8px;
-  border-radius: 2px;
-  background: var(--fill);
-}
-
-.progress-bar {
-  width: 0;
-  height: 100%;
-  border-radius: 2px;
-  background: var(--tint);
-}
-
-.progress-dot {
-  position: absolute;
-  top: 50%;
-  width: 15px;
-  height: 15px;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25), inset 0 0 0 4.5px var(--tint);
-  transform: translate(-50%, -50%);
-}
-
-.route-dist {
-  display: flex;
-  justify-content: space-between;
-  color: var(--label-2);
-  font-size: 13px;
-}
-
-.route-warning {
-  margin: 8px 0 0;
-  font-size: 13px;
-  color: var(--orange);
-}
-
 dl {
   margin: 0;
 }
 
-dt {
+dt,
+.group-title {
   color: var(--label-2);
   font-size: 11px;
   font-weight: 600;
@@ -1326,27 +1395,57 @@ dd {
   overflow-wrap: anywhere;
 }
 
-.flight-more {
-  margin: 0 14px 14px;
-  padding: 16px 18px;
+/* Grouped rows, as in iOS Settings: label on the left, value on the right. */
+.group-title {
+  margin: 0;
+  padding: 0 16px 7px;
+}
+
+.rows {
+  margin-bottom: 20px;
   border-radius: var(--radius-group);
   background: var(--group);
 }
 
-.flight-type {
-  margin-bottom: 14px;
-  font-size: 17px;
-  font-weight: 600;
+.rows > div {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 46px;
+  padding: 0 16px;
 }
 
-.info {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px 16px;
+.rows > div[hidden] {
+  display: none;
 }
 
-.info .wide {
-  grid-column: 1 / -1;
+.rows > div:not([hidden]) ~ div:not([hidden])::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 16px;
+  right: 0;
+  height: 0.5px;
+  background: var(--separator);
+}
+
+.rows dt {
+  flex-shrink: 0;
+  color: var(--label);
+  font-size: 16px;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.rows dd {
+  margin: 0;
+  min-width: 0;
+  color: var(--label-2);
+  font-size: 16px;
+  text-align: right;
 }
 
 dd.danger {
@@ -1470,27 +1569,36 @@ dd.danger {
     right: auto;
     bottom: 12px;
     width: var(--panel-w);
-    max-height: none;
-    padding-bottom: 6px;
+    height: auto;
+    touch-action: auto;
+    user-select: text;
+    -webkit-user-select: text;
     animation: pop-in 0.4s var(--ease-sheet);
     transform-origin: top left;
   }
 
-  .flight > .sheet-grip {
+  .flight-hero {
+    height: 210px;
+    cursor: auto;
+  }
+
+  .hero-grip,
+  .flight-scrim {
     display: none;
   }
 
-  .flight-head {
-    padding-top: 18px;
+  .hero-close:not(:focus-visible) {
+    opacity: 1;
+    pointer-events: auto;
   }
 
-  .flight .flight-body {
+  .hero-credit {
+    max-width: calc(100% - 80px);
+  }
+
+  .flight-body {
     overflow-y: auto;
-  }
-
-  .flight .photo,
-  .flight .flight-more {
-    display: block !important;
+    overscroll-behavior: contain;
   }
 
   body.panel-open .notes {
