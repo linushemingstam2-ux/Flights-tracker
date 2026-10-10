@@ -46,11 +46,9 @@
   --glass-bright: 0.86;
   --glass-filter: blur(7px) saturate(1.7) brightness(var(--glass-bright));
   --glass-filter-thick: blur(20px) saturate(1.8) brightness(0.82);
-  --lens-filter: blur(1.2px) saturate(1.9) brightness(1.32);
-  --lens-tint: rgba(255, 255, 255, 0.03);
   --glass-sheen: rgba(255, 255, 255, 0.09);
   --rim: inset 0 1px 0.5px rgba(255, 255, 255, 0.5), inset 0 -1px 0.5px rgba(255, 255, 255, 0.16),
-    inset 0 0 0 0.5px rgba(255, 255, 255, 0.24);
+    inset 0 0 0 0.5px rgba(255, 255, 255, 0.24), inset 0 0 12px rgba(255, 255, 255, 0.05);
   --glass-shadow: 0 10px 28px rgba(0, 0, 0, 0.36), 0 1px 3px rgba(0, 0, 0, 0.26);
   --scrim: rgba(0, 0, 0, 0.2);
   --grip: rgba(235, 235, 245, 0.3);
@@ -88,11 +86,10 @@
   --glass-bright: 1.2;
   --glass-filter: blur(7px) saturate(1.7) brightness(var(--glass-bright));
   --glass-filter-thick: blur(20px) saturate(1.8) brightness(1.2);
-  --lens-filter: blur(1.2px) saturate(1.7) brightness(1.12) contrast(1.04);
-  --lens-tint: rgba(255, 255, 255, 0.16);
   --glass-sheen: rgba(255, 255, 255, 0.5);
   --rim: inset 0 1px 0.5px #fff, inset 0 -1px 0.5px rgba(255, 255, 255, 0.75),
-    inset 0 0 0 0.5px rgba(255, 255, 255, 0.7), inset 0 -3px 8px -4px rgba(0, 0, 0, 0.12);
+    inset 0 0 0 0.5px rgba(255, 255, 255, 0.7), inset 0 -3px 8px -4px rgba(0, 0, 0, 0.12),
+    inset 0 0 12px rgba(255, 255, 255, 0.28);
   --glass-shadow: 0 10px 28px rgba(0, 0, 0, 0.13), 0 1px 3px rgba(0, 0, 0, 0.09);
   --scrim: rgba(0, 0, 0, 0.08);
   --grip: rgba(60, 60, 67, 0.3);
@@ -159,19 +156,13 @@ kbd {
 }
 
 /* ── Liquid Glass ──────────────────────────────────────────────
-   Two layers under the content, neither on the element itself (so both can see the map):
-     ::before – the body: frosted, tinted, with a sheen from above and a glow where it is touched;
-     ::after  – the lens: around the rim the world shows through sharper and brighter, as if bent
-                by the edge of the glass, finished with a fine specular highlight.
-   The two crossfade at the edge. Rounded rectangles use straight edge bands; circles a ring. */
+   Two layers under the content, neither on the element itself (so the blur can see the map):
+     ::before – the body: frosted and tinted right to its rounded edge, with a sheen from above
+                and a glow where it is touched;
+     ::after  – the rim: a fine specular line catching the light, and a soft inner glow that
+                gives the glass its thickness. */
 
 .glass {
-  --edge-x: 16px;
-  --edge-y: 10px;
-  --lens-mask: linear-gradient(90deg, #000, transparent var(--edge-x), transparent calc(100% - var(--edge-x)), #000),
-    linear-gradient(#000, transparent var(--edge-y), transparent calc(100% - var(--edge-y)), #000);
-  --body-mask: linear-gradient(90deg, transparent, #000 var(--edge-x), #000 calc(100% - var(--edge-x)), transparent),
-    linear-gradient(transparent, #000 var(--edge-y), #000 calc(100% - var(--edge-y)), transparent);
   --tint-layer: var(--glass-tint);
   --blur: 7px; /* light frost: the map stays easy to make out */
   --filter: blur(var(--blur)) saturate(1.7) brightness(var(--glass-bright));
@@ -196,26 +187,15 @@ kbd {
     linear-gradient(180deg, var(--glass-sheen), transparent 58%), var(--tint-layer);
   -webkit-backdrop-filter: var(--filter);
   backdrop-filter: var(--filter);
-  -webkit-mask: var(--body-mask);
-  mask: var(--body-mask);
-  -webkit-mask-composite: source-in;
-  mask-composite: intersect;
 }
 
 .glass::after {
-  background: var(--lens-tint);
-  -webkit-backdrop-filter: var(--lens-filter);
-  backdrop-filter: var(--lens-filter);
   box-shadow: var(--rim);
-  -webkit-mask: var(--lens-mask);
-  mask: var(--lens-mask);
 }
 
-/* Big surfaces carry text, so their glass is thicker; their lens edge is narrower. */
+/* Big surfaces carry text, so their glass is thicker. */
 .sheet.glass,
 .flight.glass {
-  --edge-x: 10px;
-  --edge-y: 10px;
   --tint-layer: var(--glass-tint-thick);
   --filter: var(--glass-filter-thick);
 }
@@ -296,8 +276,6 @@ kbd {
 }
 
 .search {
-  --edge-x: 22px;
-  --edge-y: 11px;
   --blur: 11px; /* text sits on it, so map labels behind it are blurred a little more */
   display: flex;
   align-items: center;
@@ -518,8 +496,6 @@ kbd {
 }
 
 .fab {
-  --lens-mask: radial-gradient(closest-side, transparent 64%, #000 96%);
-  --body-mask: radial-gradient(closest-side, #000 64%, transparent 96%);
   display: grid;
   place-items: center;
   width: var(--fab);
