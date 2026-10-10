@@ -3,6 +3,8 @@
 
 import {
   sprite,
+  shadowSprite,
+  SHADOW_PAD,
   shapeFor,
   shapeScale,
   altitudeColor,
@@ -10,7 +12,7 @@ import {
   SELECTED_FILL,
   EMERGENCY_FILL,
   GROUND_FILL,
-} from './icons.js';
+} from './icons.js?v=8';
 import { destinationPoint, greatCirclePoints } from './shared/geo.js';
 import { isEmergency, shortAlt } from './format.js';
 
@@ -113,7 +115,7 @@ export const AircraftLayer = L.Layer.extend({
     const o = this.getOptions();
     const store = this.store;
     const zoom = this._zoom;
-    const iconPx = zoom >= 7 ? 26 : zoom >= 5 ? 22 : 18;
+    const iconPx = zoom >= 9 ? 32 : zoom >= 7 ? 28 : zoom >= 5 ? 24 : 20;
     const pad = 40;
     const project = (lat, lon) => map.latLngToContainerPoint([lat, lon]);
     const selected = store.selectedHex ? store.get(store.selectedHex) : null;
@@ -146,12 +148,14 @@ export const AircraftLayer = L.Layer.extend({
       this._drawTrail(ctx, selected, selHit, project, 3, 0.95, Infinity);
     }
 
+    // Shadows first, so they always fall on the ground and never across another aircraft.
+    for (const hit of hits) this._drawShadow(ctx, hit, iconPx, dpr, hit.ac === selected);
     for (const hit of hits) {
       if (hit.ac !== selected) this._drawPlane(ctx, hit, o, iconPx, dpr, t, false);
     }
     if (selHit) this._drawPlane(ctx, selHit, o, iconPx, dpr, t, true);
 
-    if (o.labels && (zoom >= 7 || hits.length < 250)) this._drawLabels(ctx, hits, selected, o, zoom);
+    if (o.labels && (zoom >= 7 || hits.length < 250)) this._drawLabels(ctx, hits, selected, o, zoom, iconPx);
   },
 
   _color(ac, mode, isSelected) {
@@ -161,13 +165,38 @@ export const AircraftLayer = L.Layer.extend({
     return ac.onGround ? GROUND_FILL : CLASSIC_FILL;
   },
 
-  _drawPlane(ctx, hit, o, iconPx, dpr, t, isSelected) {
-    const { ac, x, y } = hit;
+  // Icon size in CSS px for this aircraft (and caches its silhouette choice).
+  _size(ac, iconPx, isSelected) {
     if (ac._shapeKey !== ac.type + ac.category) {
       ac._shapeKey = ac.type + ac.category;
       ac._shape = shapeFor(ac);
     }
-    const px = Math.round(iconPx * shapeScale(ac._shape) * (isSelected ? 1.15 : 1));
+    return Math.round(iconPx * shapeScale(ac._shape) * (isSelected ? 1.15 : 1));
+  },
+
+  _rotate(ctx, ac, x, y, dpr) {
+    const rot = ((ac.track ?? 0) * Math.PI) / 180;
+    const c = Math.cos(rot);
+    const s = Math.sin(rot);
+    ctx.setTransform(c * dpr, s * dpr, -s * dpr, c * dpr, x * dpr, y * dpr);
+  },
+
+  // Soft shadow offset towards the lower right; higher aircraft float further above the map.
+  _drawShadow(ctx, hit, iconPx, dpr, isSelected) {
+    const { ac, x, y } = hit;
+    const px = this._size(ac, iconPx, isSelected);
+    const lift = ac.onGround ? 0.8 : 1.6 + 3.4 * Math.min(1, Math.max(0, (ac.alt ?? 0) / 40000));
+    const off = lift * (px / 28);
+    const img = shadowSprite(ac._shape, px, dpr);
+    const full = px + SHADOW_PAD * 2;
+    this._rotate(ctx, ac, x + off, y + off, dpr);
+    ctx.drawImage(img, -full / 2, -full / 2, full, full);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  },
+
+  _drawPlane(ctx, hit, o, iconPx, dpr, t, isSelected) {
+    const { ac, x, y } = hit;
+    const px = this._size(ac, iconPx, isSelected);
     const img = sprite(ac._shape, this._color(ac, o.colorMode, isSelected), px, dpr);
 
     if (isEmergency(ac)) {
@@ -188,10 +217,7 @@ export const AircraftLayer = L.Layer.extend({
       ctx.stroke();
     }
 
-    const rot = ((ac.track ?? 0) * Math.PI) / 180;
-    const c = Math.cos(rot);
-    const s = Math.sin(rot);
-    ctx.setTransform(c * dpr, s * dpr, -s * dpr, c * dpr, x * dpr, y * dpr);
+    this._rotate(ctx, ac, x, y, dpr);
     ctx.drawImage(img, -px / 2, -px / 2, px, px);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   },
@@ -280,7 +306,7 @@ export const AircraftLayer = L.Layer.extend({
     ctx.restore();
   },
 
-  _drawLabels(ctx, hits, selected, o, zoom) {
+  _drawLabels(ctx, hits, selected, o, zoom, iconPx) {
     const detailed = zoom >= 9;
     const CELL = 6; // px; labels claim the grid cells their box covers so they never overlap
     const used = new Set();
@@ -314,7 +340,7 @@ export const AircraftLayer = L.Layer.extend({
       ctx.font = '500 10px system-ui, sans-serif';
       const subW = sub ? ctx.measureText(sub).width : 0;
       // A small dark tag to the lower right of the aircraft, like the big flight radars.
-      const bx = x + 12;
+      const bx = x + Math.max(12, this._size(ac, iconPx, isSelected) * 0.42);
       const by = y + 6;
       const bw = Math.ceil(Math.max(ac._labelW, subW)) + 10;
       const bh = sub ? 29 : 16;
