@@ -1,8 +1,8 @@
 // Aircraft symbols. Each model in aircraft-models.js is turned into true-to-scale top-view
 // geometry, then painted once per colour and size into a sprite: an outline for legibility,
 // shaded cylindrical fuselage, lit wings with control-surface lines, engines with intakes and
-// exhausts, cockpit glass, ambient occlusion where parts meet, and navigation lights. Rotors,
-// strobes and beacons are animated by the map layer.
+// exhausts, cockpit glass, ambient occlusion where parts meet, and steady navigation lights.
+// Helicopter rotors are animated by the map layer.
 
 import { MODELS, modelIdFor } from './aircraft-models.js?v=9';
 
@@ -1056,35 +1056,6 @@ export function rotorSprite(id, px, dpr) {
       ctx.lineWidth = bw * 0.35;
       ctx.stroke();
     }
-    return c;
-  });
-}
-
-/**
- * Light positions (fractions of the sprite size, from its centre) for strobes and beacons:
- * { left, right, tail, beacon } — missing when the aircraft has none.
- */
-export function lightsFor(id) {
-  const g = geometry(id);
-  const out = {};
-  for (const [k, [x, y]] of Object.entries(g.lights || {})) out[k] = [(x - BOX / 2) / BOX, (y - BOX / 2) / BOX];
-  return out;
-}
-
-/** A soft round glow for flashing lights. */
-export function glowSprite(color, dpr) {
-  return cached(`glow|${color}|${dpr}`, () => {
-    const size = Math.ceil(24 * dpr);
-    const c = canvas(size);
-    const ctx = c.getContext('2d');
-    const r = size / 2;
-    const g = ctx.createRadialGradient(r, r, 0, r, r, r);
-    g.addColorStop(0, 'rgba(255,255,255,1)');
-    g.addColorStop(0.12, color);
-    g.addColorStop(0.4, color.replace(/[\d.]+\)$/, '0.35)'));
-    g.addColorStop(1, color.replace(/[\d.]+\)$/, '0)'));
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, size, size);
     return c;
   });
 }
