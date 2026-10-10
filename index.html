@@ -20,7 +20,7 @@
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="favicon.svg" />
     <link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
-    <link rel="stylesheet" href="css/app.css?v=26" />
+    <link rel="stylesheet" href="css/app.css?v=27" />
   </head>
   <body>
     <main id="map" aria-label="Map of live air traffic"></main>
@@ -137,6 +137,7 @@
     <!-- Selected flight: bottom card on phones (swipe up for more), side panel on wider screens -->
     <div id="flight-scrim" class="flight-scrim" aria-hidden="true"></div>
     <aside id="panel" class="flight glass" hidden aria-label="Flight details">
+      <div class="flight-inner" id="p-inner">
       <div class="flight-hero" id="p-hero">
         <div id="p-art" class="hero-art" aria-hidden="true"></div>
         <img id="p-photo" alt="" referrerpolicy="no-referrer" draggable="false" />
@@ -203,9 +204,10 @@
           </dl>
         </div>
       </div>
+      </div>
     </aside>
 
     <script src="vendor/leaflet/leaflet.js"></script>
-    <script type="module" src="js/main.js?v=25"></script>
+    <script type="module" src="js/main.js?v=26"></script>
   </body>
 </html>

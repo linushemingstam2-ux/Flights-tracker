@@ -1,5 +1,5 @@
 // A Leaflet layer that draws every aircraft (plus trails and the selected flight's route)
-// onto one canvas, redrawn each animation frame.
+// onto one canvas, redrawn when the map moves and as often as the aircraft visibly move.
 
 import {
   sprite,
@@ -19,6 +19,8 @@ import { destinationPoint, greatCirclePoints } from './shared/geo.js';
 import { isEmergency } from './format.js?v=2';
 
 const L = window.L;
+const DEG = Math.PI / 180;
+const MAX_LAT = 85.0511287798; // Web Mercator's limit, as in Leaflet
 
 // Colours for what is drawn over the map, to suit the dark or light appearance.
 const INK = {
@@ -60,8 +62,12 @@ export const AircraftLayer = L.Layer.extend({
     this._canvas = L.DomUtil.create('canvas', 'aircraft-canvas leaflet-zoom-animated', pane);
     this._ctx = this._canvas.getContext('2d');
     this._animating = false;
+    this._lastDraw = 0;
+    this._interval = 0;
+    this._dirty = true;
     map.on('zoomanim', this._onZoomAnim, this);
     map.on('zoomend', this._onZoomEnd, this);
+    map.on('move resize viewreset', this._invalidate, this);
     this._raf = requestAnimationFrame(this._frame);
   },
 
@@ -69,6 +75,7 @@ export const AircraftLayer = L.Layer.extend({
     cancelAnimationFrame(this._raf);
     map.off('zoomanim', this._onZoomAnim, this);
     map.off('zoomend', this._onZoomEnd, this);
+    map.off('move resize viewreset', this._invalidate, this);
     L.DomUtil.remove(this._canvas);
     this._canvas = null;
   },
@@ -89,12 +96,40 @@ export const AircraftLayer = L.Layer.extend({
 
   _onZoomEnd() {
     this._animating = false;
+    this._dirty = true;
   },
 
+  _invalidate() {
+    this._dirty = true;
+  },
+
+  // Redrawing the whole canvas is the costliest thing the app does, and every redraw also makes
+  // each glass control re-blur the map behind it. So the map is redrawn at once when it moves or
+  // something changes, but otherwise only as often as the fastest aircraft on screen visibly
+  // moves (see draw), and never more than about 60 times a second, even on 120 Hz screens.
   _frame() {
     this._raf = requestAnimationFrame(this._frame);
     if (!this._map || this._animating) return;
-    this.draw(Date.now());
+    const o = this.getOptions();
+    const prev = this._opts;
+    if (
+      !prev ||
+      o.ink !== prev.ink ||
+      o.allTrails !== prev.allTrails ||
+      o.filter !== prev.filter ||
+      o.route !== prev.route ||
+      o.coverage !== prev.coverage ||
+      (this.store.selectedHex ?? null) !== (this._selHex ?? null)
+    ) {
+      this._dirty = true;
+    }
+    this._opts = o;
+    const t = Date.now();
+    const since = t - this._lastDraw;
+    if (since < 15 || (!this._dirty && since < this._interval)) return;
+    this._dirty = false;
+    this._lastDraw = t;
+    this.draw(t);
   },
 
   /** The aircraft drawn nearest to a container point, within `radius` px. */
@@ -130,7 +165,8 @@ export const AircraftLayer = L.Layer.extend({
       canvas.style.width = `${size.x}px`;
       canvas.style.height = `${size.y}px`;
     }
-    L.DomUtil.setPosition(canvas, map.containerPointToLayerPoint([0, 0]));
+    const topLeft = map.containerPointToLayerPoint([0, 0]);
+    L.DomUtil.setPosition(canvas, topLeft);
     this._center = map.getCenter();
     this._zoom = map.getZoom();
 
@@ -138,13 +174,22 @@ export const AircraftLayer = L.Layer.extend({
     ctx.clearRect(0, 0, w, h);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    const o = this.getOptions();
+    const o = this._opts || this.getOptions();
     this._ink = INK[o.ink] || INK.dark;
     const store = this.store;
     const zoom = this._zoom;
     const iconPx = zoom >= 9 ? 32 : zoom >= 7 ? 28 : zoom >= 5 ? 24 : 20;
     const pad = 40;
-    const project = (lat, lon) => map.latLngToContainerPoint([lat, lon]);
+    // Web Mercator straight to screen pixels: the same as map.latLngToContainerPoint, without
+    // its rounding (so aircraft glide rather than step a whole pixel) or its allocations.
+    const scale = 256 * 2 ** zoom;
+    const origin = map.getPixelOrigin();
+    const ox = -origin.x - topLeft.x;
+    const oy = -origin.y - topLeft.y;
+    const project = (lat, lon) => {
+      const s = Math.sin(Math.max(-MAX_LAT, Math.min(MAX_LAT, lat)) * DEG);
+      return { x: ((lon + 180) / 360) * scale + ox, y: (0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI)) * scale + oy };
+    };
     const selected = store.selectedHex ? store.get(store.selectedHex) : null;
     // A newly selected aircraft pops up on a spring, as places do in Apple Maps.
     const selHex = selected?.hex ?? null;
@@ -168,6 +213,20 @@ export const AircraftLayer = L.Layer.extend({
       hits.push({ ac, x: p.x, y: p.y });
     }
     this._hits = hits;
+
+    // While the map is still, redraw only as often as the fastest aircraft on screen moves about
+    // half a pixel (at least 8 times a second); faster while something is animating.
+    const metresPerPx = (40075016.686 * Math.cos(this._center.lat * DEG)) / scale;
+    let fastest = 0;
+    let lively = false;
+    for (const { ac } of hits) {
+      if (ac.gs > fastest && !ac.onGround) fastest = ac.gs;
+      if (!lively && (isEmergency(ac) || rotorFor(ac._shape ?? shapeFor(ac)))) lively = true;
+    }
+    let fps = Math.max(8, (fastest * 0.5144) / metresPerPx / 0.5);
+    if (lively) fps = Math.max(fps, 24); // spinning rotors, emergency pulse
+    if (dt < 900) fps = 60; // the selected aircraft popping up
+    this._interval = 1000 / Math.min(60, fps);
 
     if (o.allTrails && hits.length < 1500) {
       for (const hit of hits) {

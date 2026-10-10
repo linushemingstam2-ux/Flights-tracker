@@ -1047,6 +1047,16 @@ kbd {
   -webkit-user-select: none;
 }
 
+/* The card's contents keep the card's full height while it is dragged; the card only clips them.
+   On its own layer, they are then never laid out or painted again while the card moves. */
+.flight-inner {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  height: 100%;
+  will-change: transform;
+}
+
 /* Dims the map while the card is at full height; tapping it brings the card back down. */
 .flight-scrim {
   position: fixed;
