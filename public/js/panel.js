@@ -46,8 +46,8 @@ const unrubber = (shown, dim) => (dim / 0.55) * (1 / (1 - Math.min(shown / dim, 
  * corners; below its small size it slides away whole. `s` scrolls the details inside it.
  */
 class CardMotion {
-  constructor({ el, hero, content, more, scrim, onDismiss }) {
-    Object.assign(this, { el, hero, content, more, scrim, onDismiss });
+  constructor({ el, inner, hero, content, more, scrim, onDismiss }) {
+    Object.assign(this, { el, inner, hero, content, more, scrim, onDismiss });
     this.rest = 'closed';
     this.y = 0;
     this.s = 0;
@@ -70,6 +70,8 @@ class CardMotion {
     const top = Math.max(0, (search ? search.getBoundingClientRect().bottom : 60) - 6);
     const bottom = parseFloat(getComputedStyle(this.el).bottom) || 8;
     this.H = Math.max(200, window.innerHeight - bottom - top);
+    const innerH = `${this.H}px`;
+    if (this.inner.style.height !== innerH) this.inner.style.height = innerH;
     const heroH = Math.min(this.hero.offsetHeight, this.H);
     const half = Math.min(this.H, heroH + this.more.offsetTop - 2);
     this.det = { full: 0, half: this.H - half, peek: this.H - heroH, closed: this.H + 30 };
@@ -95,6 +97,7 @@ class CardMotion {
     this.s = 0;
     this.el.style.height = '';
     this.el.style.transform = '';
+    this.inner.style.height = '';
     this.content.style.transform = '';
     this.scrim.style.opacity = '';
     this.scrim.classList.remove('active');
@@ -357,6 +360,7 @@ export class Panel {
     this.onClose = onClose;
     this.motion = new CardMotion({
       el: this.el,
+      inner: $('p-inner'),
       hero: $('p-hero'),
       content: $('p-content'),
       more: $('p-more'),
