@@ -1,5 +1,5 @@
-// A Leaflet layer that draws every aircraft (plus trails, labels and the
-// selected flight's route) onto one canvas, redrawn each animation frame.
+// A Leaflet layer that draws every aircraft (plus trails and the selected flight's route)
+// onto one canvas, redrawn each animation frame.
 
 import {
   sprite,
@@ -16,7 +16,7 @@ import {
   GROUND_FILL,
 } from './icons.js?v=13';
 import { destinationPoint, greatCirclePoints } from './shared/geo.js';
-import { isEmergency, shortAlt } from './format.js';
+import { isEmergency } from './format.js';
 
 const L = window.L;
 
@@ -30,10 +30,6 @@ const INK = {
     dotEdge: '#ffffff',
     text: '#ffffff',
     halo: 'rgba(8, 12, 18, 0.9)',
-    tag: 'rgba(12, 17, 27, 0.8)',
-    tagEdge: null,
-    tagText: '#ffffff',
-    tagSub: '#a9b6c6',
     coverage: 'rgba(255, 199, 44, 0.45)',
   },
   light: {
@@ -44,10 +40,6 @@ const INK = {
     dotEdge: '#0f172a',
     text: '#0f172a',
     halo: 'rgba(255, 255, 255, 0.95)',
-    tag: 'rgba(255, 255, 255, 0.94)',
-    tagEdge: 'rgba(15, 23, 42, 0.14)',
-    tagText: '#0f172a',
-    tagSub: '#5b6b80',
     coverage: 'rgba(190, 132, 0, 0.6)',
   },
 };
@@ -55,10 +47,9 @@ const INK = {
 export const AircraftLayer = L.Layer.extend({
   initialize(store, getOptions) {
     this.store = store;
-    this.getOptions = getOptions; // () => { theme, labels, allTrails, filter, route, coverage }
+    this.getOptions = getOptions; // () => { ink, allTrails, filter, route, coverage }
     this._hits = [];
     this._frame = this._frame.bind(this);
-    this.visibleCount = 0;
   },
 
   onAdd(map) {
@@ -147,7 +138,7 @@ export const AircraftLayer = L.Layer.extend({
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     const o = this.getOptions();
-    this._ink = INK[o.theme] || INK.dark;
+    this._ink = INK[o.ink] || INK.dark;
     const store = this.store;
     const zoom = this._zoom;
     const iconPx = zoom >= 9 ? 32 : zoom >= 7 ? 28 : zoom >= 5 ? 24 : 20;
@@ -157,20 +148,17 @@ export const AircraftLayer = L.Layer.extend({
 
     if (o.coverage) this._drawCoverage(ctx, o.coverage, project);
 
-    // Work out what is on screen once, then draw in layers: trails, planes, labels.
+    // Work out what is on screen once, then draw in layers: trails, shadows, planes.
     const hits = [];
-    let visible = 0;
     for (const ac of store.sorted) {
       if (ac !== selected && !o.filter(ac)) continue;
       const [lat, lon] = store.positionAt(ac, t);
       const p = project(lat, lon);
       const onScreen = p.x >= -pad && p.y >= -pad && p.x <= size.x + pad && p.y <= size.y + pad;
       if (!onScreen && ac !== selected) continue;
-      if (onScreen) visible++;
       hits.push({ ac, x: p.x, y: p.y });
     }
     this._hits = hits;
-    this.visibleCount = visible;
 
     if (o.allTrails && hits.length < 1500) {
       for (const hit of hits) {
@@ -190,8 +178,6 @@ export const AircraftLayer = L.Layer.extend({
     }
     if (selHit) this._drawPlane(ctx, selHit, iconPx, dpr, t, true);
     this._drawLife(ctx, hits, selected, iconPx, dpr, t);
-
-    if (o.labels && (zoom >= 7 || hits.length < 250)) this._drawLabels(ctx, hits, selected, o, zoom, iconPx);
   },
 
   _color(ac, isSelected) {
@@ -359,68 +345,6 @@ export const AircraftLayer = L.Layer.extend({
     ctx.strokeStyle = this._ink.coverage;
     ctx.lineWidth = 1.5;
     ctx.stroke();
-    ctx.restore();
-  },
-
-  _drawLabels(ctx, hits, selected, o, zoom, iconPx) {
-    const ink = this._ink;
-    const detailed = zoom >= 9;
-    const CELL = 6; // px; labels claim the grid cells their box covers so they never overlap
-    const used = new Set();
-    const claim = (x0, y0, x1, y1, force) => {
-      const cx0 = Math.floor(x0 / CELL);
-      const cx1 = Math.floor(x1 / CELL);
-      const cy0 = Math.floor(y0 / CELL);
-      const cy1 = Math.floor(y1 / CELL);
-      if (!force) {
-        for (let cx = cx0; cx <= cx1; cx++) {
-          for (let cy = cy0; cy <= cy1; cy++) if (used.has(cx * 100000 + cy)) return false;
-        }
-      }
-      for (let cx = cx0; cx <= cx1; cx++) for (let cy = cy0; cy <= cy1; cy++) used.add(cx * 100000 + cy);
-      return true;
-    };
-    ctx.save();
-    ctx.textBaseline = 'top';
-    // The selected aircraft, then the highest (drawn on top), get first claim on label space.
-    const order = hits.filter((hit) => hit.ac === selected);
-    for (let i = hits.length - 1; i >= 0; i--) if (hits[i].ac !== selected) order.push(hits[i]);
-    for (const { ac, x, y } of order) {
-      const isSelected = ac === selected;
-      const text = ac.callsign || ac.reg || ac.hex.toUpperCase();
-      ctx.font = '700 11px system-ui, sans-serif';
-      if (ac._label !== text) {
-        ac._label = text;
-        ac._labelW = ctx.measureText(text).width;
-      }
-      const sub = detailed ? [shortAlt(ac), ac.type].filter(Boolean).join(' · ') : '';
-      ctx.font = '500 10px system-ui, sans-serif';
-      const subW = sub ? ctx.measureText(sub).width : 0;
-      // A small dark tag to the lower right of the aircraft, like the big flight radars.
-      const bx = x + Math.max(12, this._size(ac, iconPx, isSelected) * 0.42);
-      const by = y + 6;
-      const bw = Math.ceil(Math.max(ac._labelW, subW)) + 10;
-      const bh = sub ? 29 : 16;
-      if (!claim(bx, by, bx + bw, by + bh, isSelected)) continue;
-      ctx.beginPath();
-      if (ctx.roundRect) ctx.roundRect(bx, by, bw, bh, 4);
-      else ctx.rect(bx, by, bw, bh);
-      ctx.fillStyle = isSelected ? 'rgba(255, 77, 58, 0.92)' : ink.tag;
-      ctx.fill();
-      if (ink.tagEdge && !isSelected) {
-        ctx.lineWidth = 1;
-        ctx.strokeStyle = ink.tagEdge;
-        ctx.stroke();
-      }
-      ctx.font = '700 11px system-ui, sans-serif';
-      ctx.fillStyle = isSelected ? '#ffffff' : ink.tagText;
-      ctx.fillText(text, bx + 5, by + 3);
-      if (sub) {
-        ctx.font = '500 10px system-ui, sans-serif';
-        ctx.fillStyle = isSelected ? '#ffe3de' : ink.tagSub;
-        ctx.fillText(sub, bx + 5, by + 16);
-      }
-    }
     ctx.restore();
   },
 });
