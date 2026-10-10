@@ -3,7 +3,7 @@
 :root {
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
-  --tabbar-h: 62px;
+  --fab: 48px;
   --search-h: 48px;
   --panel-w: 380px;
 
@@ -109,7 +109,7 @@ kbd {
 }
 
 .leaflet-bottom {
-  bottom: calc(var(--tabbar-h) + var(--safe-bottom));
+  bottom: var(--safe-bottom);
 }
 
 .leaflet-control-zoom {
@@ -406,7 +406,7 @@ kbd {
 .legend {
   position: fixed;
   left: 10px;
-  bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 26px);
+  bottom: calc(var(--safe-bottom) + 26px);
   z-index: 900;
   width: 220px;
   padding: 7px 10px 5px;
@@ -455,10 +455,11 @@ kbd {
 .toast {
   position: fixed;
   left: 50%;
-  bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 34px);
+  bottom: calc(var(--safe-bottom) + 30px);
   transform: translateX(-50%);
   z-index: 1500;
-  max-width: calc(100vw - 32px);
+  max-width: calc(100vw - 2 * (var(--fab) + 28px)); /* clear of the side buttons */
+  text-align: center;
   padding: 10px 16px;
   border-radius: 12px;
   background: var(--surface-3);
@@ -466,56 +467,81 @@ kbd {
   box-shadow: var(--shadow);
 }
 
-/* ── Tab bar ─────────────────────────────────────────────── */
+/* ── Side buttons ────────────────────────────────────────── */
 
-.tabbar {
+.fabs {
   position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  right: 12px;
+  bottom: calc(var(--safe-bottom) + 30px);
   z-index: 1100;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  height: calc(var(--tabbar-h) + var(--safe-bottom));
-  padding-bottom: var(--safe-bottom);
-  background: var(--glass);
-  border-top: 1px solid var(--border);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-
-.tab {
-  position: relative;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  border: 0;
-  background: none;
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 600;
+  gap: 10px;
+  transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
-.tab svg {
-  width: 24px;
-  height: 24px;
+.fab {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: var(--fab);
+  height: var(--fab);
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--glass);
+  color: var(--text);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.38), 0 1px 0 rgba(255, 255, 255, 0.06) inset;
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  cursor: pointer;
+  transition: background-color 0.18s ease, color 0.18s ease, transform 0.12s ease;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.tab:hover,
-.tab[aria-expanded='true'] {
-  color: var(--accent);
+.fab svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.fab:hover {
+  background: var(--surface-3);
+}
+
+.fab:active {
+  transform: scale(0.93);
+}
+
+.fab[aria-expanded='true'] {
+  background: var(--accent);
+  border-color: transparent;
+  color: var(--accent-ink);
+}
+
+/* "My location" is an action rather than a page, so it sits a little apart. */
+.fab-locate {
+  margin-top: 6px;
 }
 
 .badge {
   position: absolute;
-  top: 9px;
-  left: calc(50% + 8px);
-  width: 8px;
-  height: 8px;
+  top: 7px;
+  right: 7px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
   background: var(--accent);
+  box-shadow: 0 0 0 2px var(--surface);
+}
+
+.fab[aria-expanded='true'] .badge {
+  background: var(--accent-ink);
+  box-shadow: 0 0 0 2px var(--accent);
 }
 
 /* ── Sheets (map, filters, settings) ─────────────────────── */
@@ -543,9 +569,26 @@ kbd {
   animation: slide-up 0.22s ease-out;
 }
 
-.sheet h2 {
-  margin: 4px 0 14px;
-  font-size: 18px;
+.sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 16px;
+}
+
+.sheet-head h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.sheet-close svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
 }
 
 .sheet-grip {
@@ -827,7 +870,7 @@ kbd {
   -webkit-user-select: none;
 }
 
-.tabbar,
+.fabs,
 .sheet-grip {
   user-select: none;
   -webkit-user-select: none;
@@ -1086,8 +1129,14 @@ dd.danger {
   border-top: 1px solid var(--border);
 }
 
-/* While a flight card is open on a phone, it replaces the tab bar. */
-body.panel-open .tabbar,
+/* While a flight card is open on a phone, it takes the bottom of the screen: the side buttons
+   step aside and the legend hides. */
+body.panel-open .fabs {
+  opacity: 0;
+  transform: translateX(12px);
+  pointer-events: none;
+}
+
 body.panel-open .legend {
   display: none;
 }
@@ -1123,17 +1172,34 @@ body.panel-open .legend {
     display: block;
   }
 
-  .tabbar {
-    left: 50%;
-    right: auto;
-    bottom: 16px;
-    width: 360px;
-    height: 62px;
-    margin-left: -180px;
-    padding: 0;
-    border: 1px solid var(--border);
-    border-radius: 18px;
-    box-shadow: var(--shadow);
+  /* Side buttons sit above the zoom buttons, which get the same round glass look. */
+  .fabs {
+    right: 14px;
+    bottom: 132px;
+    z-index: 1260; /* above the (clear) backdrop, so another button switches pages directly */
+  }
+
+  .leaflet-right .leaflet-control {
+    margin-right: 14px;
+  }
+
+  .leaflet-control-zoom.leaflet-bar {
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: calc(var(--fab) / 2);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.38);
+  }
+
+  .leaflet-control-zoom.leaflet-bar a {
+    width: var(--fab);
+    height: 42px;
+    line-height: 42px;
+    font-size: 20px;
+    font-weight: 400;
+  }
+
+  .leaflet-control-zoom.leaflet-bar a:first-child {
+    border-bottom-color: var(--border);
   }
 
   .legend {
@@ -1142,19 +1208,20 @@ body.panel-open .legend {
   }
 
   .toast {
-    bottom: 96px;
+    bottom: 24px;
   }
 
   .backdrop {
     background: transparent;
   }
 
+  /* Pages pop out to the left of the side buttons. */
   .sheet {
-    left: calc(50% - 190px);
-    right: auto;
-    bottom: 90px;
+    left: auto;
+    right: calc(14px + var(--fab) + 12px);
+    bottom: 132px;
     width: 380px;
-    max-height: calc(100% - 170px);
+    max-height: calc(100% - 212px);
     padding-bottom: 18px;
     border-radius: 18px;
     border: 1px solid var(--border);
@@ -1196,9 +1263,10 @@ body.panel-open .legend {
     display: block !important;
   }
 
-  body.panel-open .tabbar,
-  body.panel-open .legend {
-    display: grid;
+  body.panel-open .fabs {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
   }
 
   body.panel-open .legend {

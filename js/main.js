@@ -533,9 +533,9 @@ searchInput.addEventListener('focus', () => {
   if (searchInput.value.trim()) renderResults();
 });
 
-// ── Sheets: map, filters & settings (opened from the tab bar) ────────────
+// ── Pages: map, filters & settings (opened from the round side buttons) ───
 
-const sheetButtons = [...document.querySelectorAll('.tab[data-sheet]')];
+const sheetButtons = [...document.querySelectorAll('.fab[data-sheet]')];
 
 function closeSheets() {
   for (const btn of sheetButtons) {
@@ -556,6 +556,7 @@ for (const btn of sheetButtons) {
   });
 }
 $('sheet-backdrop').addEventListener('click', closeSheets);
+for (const btn of document.querySelectorAll('.sheet-close')) btn.addEventListener('click', closeSheets);
 
 /** A group of role="radio" buttons: mark `value` as chosen and call `onPick` on taps. */
 function bindChoice(group, value, onPick) {
