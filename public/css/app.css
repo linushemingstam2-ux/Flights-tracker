@@ -283,6 +283,7 @@ kbd {
   flex-direction: column;
   align-items: flex-start;
   gap: 8px;
+  padding-right: calc(var(--fab) + 10px); /* keep status and notices clear of the side buttons */
   pointer-events: none;
 }
 
@@ -433,7 +434,7 @@ kbd {
   bottom: calc(var(--safe-bottom) + 30px);
   transform: translateX(-50%);
   z-index: 1500;
-  max-width: calc(100vw - 2 * (var(--fab) + 28px)); /* clear of the side buttons */
+  max-width: calc(100vw - 32px);
   text-align: center;
   padding: 10px 16px;
   border-radius: 12px;
@@ -446,13 +447,12 @@ kbd {
 
 .fabs {
   position: fixed;
-  right: 12px;
-  bottom: calc(var(--safe-bottom) + 30px);
+  top: calc(var(--safe-top) + 10px + var(--search-h) + 10px); /* just under the search bar */
+  right: 10px;
   z-index: 1100;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
 .fab {
@@ -1080,14 +1080,6 @@ dd.danger {
   border-top: 1px solid var(--border);
 }
 
-/* While a flight card is open on a phone, it takes the bottom of the screen and the side
-   buttons step aside. */
-body.panel-open .fabs {
-  opacity: 0;
-  transform: translateX(12px);
-  pointer-events: none;
-}
-
 /* ── Wide screens ────────────────────────────────────────── */
 
 @media (min-width: 761px) {
@@ -1119,12 +1111,13 @@ body.panel-open .fabs {
     display: block;
   }
 
-  /* Side buttons sit above the zoom buttons, which get the same round glass look. */
   .fabs {
+    top: calc(12px + var(--search-h) + 12px);
     right: 14px;
-    bottom: 132px;
     z-index: 1260; /* above the (clear) backdrop, so another button switches pages directly */
   }
+
+  /* The zoom buttons get the same round glass look as the side buttons. */
 
   .leaflet-right .leaflet-control {
     margin-right: 14px;
@@ -1159,11 +1152,12 @@ body.panel-open .fabs {
 
   /* Pages pop out to the left of the side buttons. */
   .sheet {
+    top: calc(12px + var(--search-h) + 12px);
     left: auto;
     right: calc(14px + var(--fab) + 12px);
-    bottom: 132px;
+    bottom: auto;
     width: 380px;
-    max-height: calc(100% - 212px);
+    max-height: calc(100% - var(--search-h) - 48px);
     padding-bottom: 18px;
     border-radius: 18px;
     border: 1px solid var(--border);
@@ -1203,12 +1197,6 @@ body.panel-open .fabs {
   .flight .photo,
   .flight .flight-more {
     display: block !important;
-  }
-
-  body.panel-open .fabs {
-    opacity: 1;
-    transform: none;
-    pointer-events: auto;
   }
 
   body.panel-open .notes {
