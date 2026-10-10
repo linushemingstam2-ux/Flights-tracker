@@ -18,12 +18,20 @@ async function getJson(url) {
   return body;
 }
 
+/**
+ * Use the bundled server when there is one: on this site itself, or the one named in
+ * <meta name="tracker-api"> (lets a static copy, e.g. on GitHub Pages, use a hosted API).
+ */
 export async function createDataSource() {
-  try {
-    const health = await getJson('api/health');
-    if (health?.ok) return new ServerSource();
-  } catch {
-    // No backend: this is a static deployment.
+  const configured = document.querySelector('meta[name="tracker-api"]')?.content.trim();
+  const bases = ['', ...(configured ? [configured.replace(/\/?$/, '/')] : [])];
+  for (const base of bases) {
+    try {
+      const health = await getJson(`${base}api/health`);
+      if (health?.ok) return new ServerSource(base);
+    } catch {
+      // Not available here: try the next option.
+    }
   }
   return new DirectSource();
 }
@@ -33,25 +41,29 @@ const pollMsFor = (source) => PROVIDERS[source]?.pollMs ?? 5000;
 class ServerSource {
   mode = 'server';
 
+  constructor(base = '') {
+    this.base = base;
+  }
+
   pollMs(source) {
     return pollMsFor(source);
   }
 
   area(lat, lon, r, source) {
     const q = new URLSearchParams({ lat: lat.toFixed(4), lon: lon.toFixed(4), r: Math.ceil(r), source });
-    return getJson(`api/aircraft?${q}`);
+    return getJson(`${this.base}api/aircraft?${q}`);
   }
 
   find(kind, value, source) {
-    return getJson(`api/find?${new URLSearchParams({ [kind]: value, source })}`);
+    return getJson(`${this.base}api/find?${new URLSearchParams({ [kind]: value, source })}`);
   }
 
   async route(callsign) {
-    return (await getJson(`api/route?${new URLSearchParams({ callsign })}`)).route;
+    return (await getJson(`${this.base}api/route?${new URLSearchParams({ callsign })}`)).route;
   }
 
   details(hex) {
-    return getJson(`api/info?${new URLSearchParams({ hex })}`);
+    return getJson(`${this.base}api/info?${new URLSearchParams({ hex })}`);
   }
 }
 
