@@ -20,8 +20,46 @@
   --danger: #ff4d5e;
   --ok: #3ddc84;
   --shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  --link: var(--accent);
+  --warn: #f5a623;
+  --map-bg: #0e1621;
+  --attrib-bg: rgba(14, 20, 32, 0.7);
+  --attrib-link: #c2cddb;
+  --fab-border: rgba(255, 255, 255, 0.1);
+  --fab-shadow: 0 6px 18px rgba(0, 0, 0, 0.38), 0 1px 0 rgba(255, 255, 255, 0.06) inset;
+  --scrim: rgba(0, 0, 0, 0.35);
+  --sheet-shadow: 0 -10px 30px rgba(0, 0, 0, 0.45);
+  --grip: rgba(255, 255, 255, 0.25);
+  --btn-on: #fff;
+  --btn-on-ink: var(--accent-ink);
   color-scheme: dark;
   font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Light mode: white surfaces and dark ink, set on <html> together with the light map. */
+:root[data-theme='light'] {
+  --bg: #f3f5f8;
+  --surface: #ffffff;
+  --surface-2: #f1f3f7;
+  --surface-3: #e4e8ef;
+  --glass: rgba(255, 255, 255, 0.94);
+  --border: rgba(15, 23, 42, 0.09);
+  --text: #0f172a;
+  --muted: #64748b;
+  --shadow: 0 10px 30px rgba(15, 23, 42, 0.14);
+  --link: #a16207;
+  --warn: #b45309;
+  --map-bg: #f2efe9;
+  --attrib-bg: rgba(255, 255, 255, 0.75);
+  --attrib-link: #475569;
+  --fab-border: rgba(15, 23, 42, 0.08);
+  --fab-shadow: 0 6px 18px rgba(15, 23, 42, 0.16), 0 1px 0 rgba(255, 255, 255, 0.8) inset;
+  --scrim: rgba(15, 23, 42, 0.18);
+  --sheet-shadow: 0 -8px 30px rgba(15, 23, 42, 0.14);
+  --grip: rgba(15, 23, 42, 0.2);
+  --btn-on: #0f172a;
+  --btn-on-ink: #ffffff;
+  color-scheme: light;
 }
 
 *,
@@ -63,7 +101,7 @@ button {
 }
 
 a {
-  color: var(--accent);
+  color: var(--link);
 }
 
 kbd {
@@ -88,7 +126,7 @@ kbd {
 }
 
 .leaflet-container {
-  background: #0e1621;
+  background: var(--map-bg);
   font: inherit;
 }
 
@@ -128,13 +166,13 @@ kbd {
 }
 
 .leaflet-control-attribution {
-  background: rgba(14, 20, 32, 0.7) !important;
+  background: var(--attrib-bg) !important;
   color: var(--muted);
   font-size: 10px;
 }
 
 .leaflet-control-attribution a {
-  color: #c2cddb;
+  color: var(--attrib-link);
 }
 
 /* ── Top: search, status, notices ────────────────────────── */
@@ -144,7 +182,7 @@ kbd {
   top: calc(var(--safe-top) + 10px);
   left: 10px;
   right: 10px;
-  z-index: 1000;
+  z-index: 1150; /* search results open over the round buttons */
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -463,10 +501,10 @@ kbd {
   height: var(--fab);
   padding: 0;
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--fab-border);
   background: var(--glass);
   color: var(--text);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.38), 0 1px 0 rgba(255, 255, 255, 0.06) inset;
+  box-shadow: var(--fab-shadow);
   backdrop-filter: blur(14px) saturate(1.4);
   -webkit-backdrop-filter: blur(14px) saturate(1.4);
   cursor: pointer;
@@ -525,7 +563,7 @@ kbd {
   position: fixed;
   inset: 0;
   z-index: 1250;
-  background: rgba(0, 0, 0, 0.35);
+  background: var(--scrim);
 }
 
 .sheet {
@@ -540,7 +578,7 @@ kbd {
   padding: 4px 18px calc(18px + var(--safe-bottom));
   border-radius: 20px 20px 0 0;
   background: var(--surface);
-  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.45);
+  box-shadow: var(--sheet-shadow);
   animation: slide-up 0.22s ease-out;
 }
 
@@ -579,7 +617,7 @@ kbd {
   width: 40px;
   height: 5px;
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.25);
+  background: var(--grip);
 }
 
 @keyframes slide-up {
@@ -633,9 +671,53 @@ kbd {
   font-size: 12px;
 }
 
+/* Sliders drawn to match both modes: a slim track filled up to the knob (--fill is set in script). */
 .range input {
   flex: 1;
-  accent-color: var(--accent);
+  height: 28px;
+  margin: 0;
+  background: transparent;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+
+.range input::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(to right, var(--accent) var(--fill, 0%), var(--surface-3) var(--fill, 0%));
+}
+
+.range input::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--surface-3);
+}
+
+.range input::-moz-range-progress {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+.range input::-webkit-slider-thumb {
+  width: 22px;
+  height: 22px;
+  margin-top: -9px;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35), 0 0 0 0.5px rgba(0, 0, 0, 0.08);
+  -webkit-appearance: none;
+}
+
+.range input::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35), 0 0 0 0.5px rgba(0, 0, 0, 0.08);
 }
 
 .toggle {
@@ -708,10 +790,29 @@ kbd {
 }
 
 .swatch {
+  position: relative;
   display: block;
   width: 100%;
   aspect-ratio: 4 / 3;
   border-radius: 9px;
+}
+
+/* A tiny search bar on each preview hints that the whole app changes colour, not just the map. */
+.swatch::after {
+  content: '';
+  position: absolute;
+  top: 9%;
+  left: 9%;
+  right: 9%;
+  height: 17%;
+  border-radius: 999px;
+  background: rgba(18, 25, 38, 0.94);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+}
+
+.swatch-light::after {
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.25);
 }
 
 .swatch-dark {
@@ -767,7 +868,8 @@ kbd {
 }
 
 .btn.active {
-  background: #fff;
+  background: var(--btn-on);
+  color: var(--btn-on-ink);
 }
 
 .btn-secondary:hover {
@@ -810,7 +912,7 @@ kbd {
   padding-bottom: var(--safe-bottom);
   border-radius: 20px 20px 0 0;
   background: var(--surface);
-  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.45);
+  box-shadow: var(--sheet-shadow);
   animation: slide-up 0.25s ease-out;
 }
 
@@ -1015,7 +1117,7 @@ kbd {
 .route-warning {
   margin: 8px 0 0;
   font-size: 12px;
-  color: #f5a623;
+  color: var(--warn);
 }
 
 dl {
@@ -1125,9 +1227,9 @@ dd.danger {
 
   .leaflet-control-zoom.leaflet-bar {
     overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--fab-border);
     border-radius: calc(var(--fab) / 2);
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.38);
+    box-shadow: var(--fab-shadow);
   }
 
   .leaflet-control-zoom.leaflet-bar a {

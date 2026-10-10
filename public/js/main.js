@@ -1,7 +1,7 @@
 // Flight radar app: map, live polling, selection, search, filters and settings.
 
 import { AircraftStore } from './store.js';
-import { AircraftLayer } from './aircraft-layer.js?v=13';
+import { AircraftLayer } from './aircraft-layer.js?v=14';
 import { Panel } from './panel.js?v=13';
 import { createDataSource } from './datasource.js?v=7';
 import { SimSource } from './sim.js';
@@ -26,10 +26,12 @@ const STREET_TILES = [
     subdomains: 'abc',
   },
 ];
+// Each style also sets the app's appearance: dark mode, light mode, or satellite (dark UI).
 const MAP_STYLES = {
-  dark: { tiles: STREET_TILES, dark: true }, // street map, darkened with a CSS filter
-  light: { tiles: STREET_TILES },
+  dark: { tiles: STREET_TILES, dark: true, theme: 'dark' }, // street map, darkened with a CSS filter
+  light: { tiles: STREET_TILES, theme: 'light' },
   satellite: {
+    theme: 'dark',
     tiles: [
       {
         url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
@@ -76,12 +78,19 @@ map.attributionControl.setPrefix('<a href="https://leafletjs.com" target="_blank
 
 let tileLayer = null;
 let tileIndex = 0;
+/** Dark or light colours for the whole app, including the phone's status bar. */
+function applyTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  document.querySelector('meta[name="theme-color"]').content = theme === 'light' ? '#ffffff' : '#0e1420';
+}
+
 function applyMapStyle(nextServer = false) {
   const style = MAP_STYLES[settings.mapStyle];
   tileIndex = nextServer ? tileIndex + 1 : 0;
   const t = style.tiles[tileIndex];
   if (tileLayer) map.removeLayer(tileLayer);
   $('map').classList.toggle('map-dark', Boolean(style.dark));
+  applyTheme(style.theme);
   let loaded = 0;
   let failed = 0;
   tileLayer = L.tileLayer(t.url, {
@@ -100,6 +109,7 @@ function applyMapStyle(nextServer = false) {
 applyMapStyle();
 
 const layer = new AircraftLayer(store, () => ({
+  theme: MAP_STYLES[settings.mapStyle].theme,
   labels: settings.labels,
   allTrails: settings.allTrails,
   filter,
@@ -582,6 +592,7 @@ function bindFilters() {
     text.value = f.text;
     min.value = f.altMin;
     max.value = f.altMax;
+    for (const r of [min, max]) r.style.setProperty('--fill', `${(r.value / r.max) * 100}%`);
     ground.checked = f.hideGround;
     mil.checked = f.militaryOnly;
     const fmt = (v) => `${nf.format(v)} ft`;

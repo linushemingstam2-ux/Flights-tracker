@@ -11,10 +11,16 @@
     <meta name="apple-mobile-web-app-title" content="Tracker" />
     <!-- Optional: URL of a hosted Tracker server (e.g. on Vercel) for copies of this page without one. -->
     <meta name="tracker-api" content="" />
+    <script>
+      // Light mode is applied before the first paint, so it never flashes dark on load.
+      try {
+        if (JSON.parse(localStorage.getItem('tracker.settings.v1'))?.mapStyle === 'light') document.documentElement.dataset.theme = 'light';
+      } catch {}
+    </script>
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="favicon.svg" />
     <link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
-    <link rel="stylesheet" href="css/app.css?v=12" />
+    <link rel="stylesheet" href="css/app.css?v=14" />
   </head>
   <body>
     <main id="map" aria-label="Map of live air traffic"></main>
@@ -107,9 +113,9 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg>
         </button>
       </header>
-      <div id="s-map" class="style-cards" role="radiogroup" aria-label="Map style">
-        <button type="button" role="radio" data-value="dark" aria-checked="false"><i class="swatch swatch-dark"></i>Dark</button>
-        <button type="button" role="radio" data-value="light" aria-checked="false"><i class="swatch swatch-light"></i>Light</button>
+      <div id="s-map" class="style-cards" role="radiogroup" aria-label="Appearance">
+        <button type="button" role="radio" data-value="dark" aria-checked="false"><i class="swatch swatch-dark"></i>Dark mode</button>
+        <button type="button" role="radio" data-value="light" aria-checked="false"><i class="swatch swatch-light"></i>Light mode</button>
         <button type="button" role="radio" data-value="satellite" aria-checked="false"><i class="swatch swatch-satellite"></i>Satellite</button>
       </div>
       <label class="toggle"><span>Callsign labels</span><input id="s-labels" type="checkbox" /></label>
@@ -198,6 +204,6 @@
     </aside>
 
     <script src="vendor/leaflet/leaflet.js"></script>
-    <script type="module" src="js/main.js?v=14"></script>
+    <script type="module" src="js/main.js?v=16"></script>
   </body>
 </html>
