@@ -3,7 +3,7 @@
 import { AircraftStore } from './store.js';
 import { AircraftLayer } from './aircraft-layer.js';
 import { Panel } from './panel.js';
-import { createDataSource } from './datasource.js?v=5';
+import { createDataSource } from './datasource.js?v=6';
 import { SimSource } from './sim.js';
 import { loadSettings, saveSettings, makeFilter, DEFAULTS } from './settings.js';
 import { svgIcon, shapeFor, altitudeHue, CLASSIC_FILL } from './icons.js';

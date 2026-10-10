@@ -1,0 +1,14 @@
+# Render Blueprint: deploys the flight radar as a free web service.
+# Render dashboard → New → Blueprint → pick this repository → Apply.
+services:
+  - type: web
+    name: tracker-flight-radar
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
