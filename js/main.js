@@ -1,8 +1,8 @@
 // Flight radar app: map, live polling, selection, search, filters and settings.
 
 import { AircraftStore } from './store.js';
-import { AircraftLayer } from './aircraft-layer.js?v=20';
-import { Panel } from './panel.js?v=18';
+import { AircraftLayer } from './aircraft-layer.js?v=21';
+import { Panel } from './panel.js?v=19';
 import { createDataSource } from './datasource.js?v=8';
 import { SimSource } from './sim.js';
 import { loadSettings, saveSettings, makeFilter, DEFAULTS } from './settings.js';
@@ -10,7 +10,8 @@ import { svgIcon, shapeFor, CLASSIC_FILL } from './icons.js?v=14';
 import { shortAlt } from './format.js?v=2';
 import { distanceNm, normalizeLon } from './shared/geo.js';
 import { PROVIDERS } from './shared/providers.js';
-import { vectorStyle, airportBadge, LAND } from './map-style.js?v=1';
+import { vectorStyle, airportBadge, LAND } from './map-style.js?v=2';
+import { WeatherOverlay, currentWeather, describeWeather, weatherIcon, windArrow } from './weather.js?v=1';
 
 const L = window.L;
 const $ = (id) => document.getElementById(id);
@@ -35,12 +36,15 @@ const MAP_STYLES = {
   dark: { vector: 'dark', tiles: STREET_TILES, dark: true, theme: 'dark', ink: 'dark' }, // raster darkened with a CSS filter
   light: { vector: 'light', tiles: STREET_TILES, theme: 'light', ink: 'light' },
   satellite: {
+    vector: 'satellite', // Esri imagery at full phone resolution, with labels laid over it
     theme: 'light',
     ink: 'dark',
     tiles: [
       {
         url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
         attribution: 'Imagery &copy; Esri, Maxar, Earthstar Geographics',
+        retina: true,
+        maxNative: 19,
       },
       ...STREET_TILES,
     ],
@@ -85,6 +89,8 @@ map.attributionControl.setPrefix('<a href="https://leafletjs.com" target="_blank
 
 let tileLayer = null;
 let tileIndex = 0;
+// Rain radar or clouds between the map and the aircraft (see weather.js).
+const weather = new WeatherOverlay(map, { onFail: (message) => toast(message) });
 /** Dark or light colours for the whole app, including the phone's status bar. */
 function applyTheme(theme) {
   document.documentElement.dataset.theme = theme;
@@ -157,7 +163,7 @@ async function showVectorMap(theme) {
   glLayer.addTo(map);
   const gl = glLayer.getMaplibreMap();
   gl.on('styleimagemissing', (e) => {
-    const m = /^airport-badge-(light|dark)$/.exec(e.id);
+    const m = /^airport-badge-(light|dark|satellite)$/.exec(e.id);
     if (!m || gl.hasImage(e.id)) return;
     const badge = airportBadge(m[1]);
     gl.addImage(e.id, badge.image, { pixelRatio: badge.pixelRatio });
@@ -183,6 +189,7 @@ async function showVectorMap(theme) {
 function applyMapStyle(nextServer = false) {
   const style = MAP_STYLES[settings.mapStyle];
   applyTheme(style.theme);
+  weather?.setMapStyle(settings.mapStyle);
   if (style.vector && VECTOR_MAP && !vectorFailed) {
     showVectorMap(style.vector);
     return;
@@ -198,7 +205,8 @@ function applyMapStyle(nextServer = false) {
     attribution: t.attribution,
     subdomains: t.subdomains || 'abc',
     maxZoom: 18,
-    maxNativeZoom: 18,
+    maxNativeZoom: t.maxNative || 18,
+    detectRetina: Boolean(t.retina), // sharper imagery on high-resolution screens
   });
   tileLayer.on('tileload', () => loaded++);
   // A server that keeps failing before any tile has loaded is down or blocked: use the next one.
@@ -211,7 +219,7 @@ applyMapStyle();
 
 const layer = new AircraftLayer(store, () => ({
   ink: MAP_STYLES[settings.mapStyle].ink,
-  allTrails: settings.allTrails,
+  logos: settings.airlineLogos,
   filter,
   route,
   coverage,
@@ -393,7 +401,21 @@ async function loadRoute(ac) {
   if (store.selectedHex === ac.hex && enrichedCallsign === cs) {
     route = r;
     panel.setRoute(r);
+    showDestinationWeather();
   }
+}
+
+/** Live weather at the selected flight's destination, in its card. */
+function showDestinationWeather() {
+  const r = route;
+  const hex = store.selectedHex;
+  panel.setDestinationWeather(null);
+  if (!settings.liveWeather || !r?.destination) return;
+  currentWeather(r.destination.lat, r.destination.lon)
+    .then((w) => {
+      if (store.selectedHex === hex && route === r && settings.liveWeather) panel.setDestinationWeather(w, r.destination);
+    })
+    .catch(() => {});
 }
 
 function setFollowing(on) {
@@ -695,20 +717,91 @@ function bindFilters() {
 bindFilters();
 
 function bindSettings() {
-  const trails = $('s-trails');
-  trails.checked = settings.allTrails;
-
   bindChoice($('s-map'), settings.mapStyle, (v) => {
     settings.mapStyle = v;
     applyMapStyle();
     persist();
   });
-  trails.addEventListener('change', () => {
-    settings.allTrails = trails.checked;
+  bindChoice($('s-weather'), settings.weather, (v) => {
+    settings.weather = v;
+    weather.set(v);
+    persist();
+  });
+  const live = $('s-live-weather');
+  live.checked = settings.liveWeather;
+  live.addEventListener('change', () => {
+    settings.liveWeather = live.checked;
+    persist();
+    showLiveWeather();
+    showDestinationWeather();
+  });
+  const logos = $('s-logos');
+  logos.checked = settings.airlineLogos;
+  logos.addEventListener('change', () => {
+    settings.airlineLogos = logos.checked; // the map picks it up on its next frame
     persist();
   });
 }
 bindSettings();
+
+// ── Weather ──────────────────────────────────────────────────────────────
+
+const WEATHER_KINDS = ['off', 'rain', 'clouds'];
+if (!WEATHER_KINDS.includes(settings.weather)) settings.weather = 'off';
+weather.set(settings.weather);
+
+// Live weather where you look: a chip under the search bar, as in Apple Maps. Tap it for more.
+const wxChip = $('wx-chip');
+const OPEN_METEO_CREDIT = '<a href="https://open-meteo.com" target="_blank" rel="noopener">Weather by Open-Meteo</a>';
+let wxTimer = 0;
+let wxCredited = false;
+
+function creditOpenMeteo(on) {
+  if (on === wxCredited) return;
+  wxCredited = on;
+  if (on) map.attributionControl.addAttribution(OPEN_METEO_CREDIT);
+  else map.attributionControl.removeAttribution(OPEN_METEO_CREDIT);
+}
+
+function showLiveWeather() {
+  clearTimeout(wxTimer);
+  creditOpenMeteo(settings.liveWeather);
+  if (!settings.liveWeather || map.getZoom() < 4) {
+    wxChip.hidden = true;
+    return;
+  }
+  wxTimer = setTimeout(async () => {
+    const c = map.getCenter();
+    try {
+      const w = await currentWeather(c.lat, normalizeLon(c.lng));
+      if (settings.liveWeather) renderLiveWeather(w);
+    } catch {
+      wxChip.hidden = true;
+    }
+  }, 500);
+}
+
+function renderLiveWeather(w) {
+  const d = describeWeather(w.code, w.isDay);
+  const temp = Math.round(w.temp);
+  const wind = Math.round(w.wind);
+  $('wx-icon').innerHTML = weatherIcon(d.icon);
+  $('wx-temp').textContent = `${temp}°`;
+  $('wx-wind').innerHTML = wind < 1 ? 'Calm' : `${windArrow(w.windDir)}${wind} kt`;
+  const gusts = Math.round(w.gusts);
+  $('wx-more').textContent = [d.text, gusts >= wind + 5 ? `gusts ${gusts} kt` : '', `${Math.round(w.cloud)}% cloud`]
+    .filter(Boolean)
+    .join(' · ');
+  wxChip.setAttribute('aria-label', `Weather here: ${d.text}, ${temp} degrees, wind ${wind} knots`);
+  wxChip.hidden = false;
+}
+
+wxChip.addEventListener('click', () => {
+  wxChip.setAttribute('aria-expanded', String(wxChip.getAttribute('aria-expanded') !== 'true'));
+});
+map.on('moveend', showLiveWeather);
+setInterval(showLiveWeather, 10 * 60 * 1000);
+showLiveWeather();
 
 // ── Liquid Glass touch ───────────────────────────────────────────────────
 // Pressed glass lights up under the finger and swells, then springs back (see .pressed in CSS).

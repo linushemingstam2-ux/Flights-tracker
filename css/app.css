@@ -52,6 +52,13 @@
   --glass-shadow: 0 10px 28px rgba(0, 0, 0, 0.36), 0 1px 3px rgba(0, 0, 0, 0.26);
   --scrim: rgba(0, 0, 0, 0.2);
   --hero-halo: rgba(0, 0, 0, 0.45);
+  --wx-cloud: #eef1f6;
+  --wx-sun: #ffcc00;
+  --wx-moon: #f5e7a8;
+  --wx-drop: #64b8ff;
+  --wx-flake: #c8e6ff;
+  --seg-bg: rgba(118, 118, 128, 0.24);
+  --seg-on: #636366;
   --grip: rgba(235, 235, 245, 0.3);
   --btn-on: #ffffff;
   --btn-on-ink: #000000;
@@ -93,6 +100,13 @@
   --glass-shadow: 0 10px 28px rgba(0, 0, 0, 0.13), 0 1px 3px rgba(0, 0, 0, 0.09);
   --scrim: rgba(0, 0, 0, 0.08);
   --hero-halo: rgba(255, 255, 255, 0.85);
+  --wx-cloud: #aab3c2;
+  --wx-sun: #f7b500;
+  --wx-moon: #c9a227;
+  --wx-drop: #1e88e5;
+  --wx-flake: #6fb4ef;
+  --seg-bg: rgba(118, 118, 128, 0.12);
+  --seg-on: #ffffff;
   --grip: rgba(60, 60, 67, 0.3);
   --btn-on: #000000;
   --btn-on-ink: #ffffff;
@@ -695,6 +709,7 @@ kbd {
 }
 
 .range + .range::before,
+.seg-row + .toggle::before,
 .toggle + .toggle::before {
   content: '';
   position: absolute;
@@ -819,7 +834,6 @@ kbd {
   transform: translateX(14px);
 }
 
-/* Appearance picker: previews with a round check underneath, like iOS Display settings. */
 /* Appearance: the same place in each style, as in Apple Maps' map chooser. The chosen one wears a
    ring with a little air around it, and its name turns bold. */
 .map-choices {
@@ -915,6 +929,215 @@ kbd {
   text-align: center;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+/* An iOS segmented control: the chosen segment is a raised tile. */
+.seg-row {
+  position: relative;
+  padding: 12px 14px;
+}
+
+.segmented {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  padding: 2px;
+  border-radius: 10px;
+  background: var(--seg-bg);
+}
+
+.segmented button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  height: 32px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--label);
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.segmented button[aria-checked='true'] {
+  background: var(--seg-on);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12), 0 0 0 0.5px rgba(0, 0, 0, 0.04);
+  font-weight: 600;
+}
+
+.segmented button:focus-visible {
+  outline: 2px solid var(--tint);
+  outline-offset: 1px;
+}
+
+.segmented svg {
+  flex-shrink: 0;
+  width: 17px;
+  height: 17px;
+  fill: currentColor;
+  stroke: none;
+}
+
+.segmented svg .drops {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+.field-note {
+  margin: 0;
+  padding: 0 18px;
+  color: var(--label-2);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+/* ── Live weather ────────────────────────────────────────── */
+
+/* Weather where you look, as Apple Maps shows it: a small glass chip; tap it for the details. */
+.wx-chip {
+  position: fixed;
+  top: calc(var(--safe-top) + 10px + var(--search-h) + 10px);
+  left: 12px;
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  max-width: calc(100% - 24px - var(--fab) - 12px);
+  padding: 9px 14px;
+  border: 0;
+  border-radius: 22px;
+  color: var(--label);
+  font-size: 15px;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.wx-main {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.wx-icon .wx-svg {
+  display: block;
+  width: 24px;
+  height: 24px;
+}
+
+.wx-wind {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 4px;
+  color: var(--label-2);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.wx-arrow {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.wx-more {
+  display: none;
+  color: var(--label-2);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.wx-chip[aria-expanded='true'] .wx-more {
+  display: block;
+}
+
+/* Weather symbols, coloured as SF Symbols' multicolour set. */
+.wx-svg .wx-sun {
+  fill: var(--wx-sun);
+}
+
+.wx-svg .wx-ray {
+  fill: none;
+  stroke: var(--wx-sun);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+.wx-svg .wx-moon {
+  fill: var(--wx-moon);
+}
+
+.wx-svg .wx-cloud {
+  fill: var(--wx-cloud);
+}
+
+.wx-svg .wx-drop,
+.wx-svg .wx-flake,
+.wx-svg .wx-fog {
+  fill: none;
+  stroke-linecap: round;
+}
+
+.wx-svg .wx-drop {
+  stroke: var(--wx-drop);
+  stroke-width: 1.8;
+}
+
+.wx-svg .wx-flake {
+  stroke: var(--wx-flake);
+  stroke-width: 2.6;
+}
+
+.wx-svg .wx-fog {
+  stroke: var(--wx-cloud);
+  stroke-width: 1.8;
+}
+
+.wx-svg .wx-bolt {
+  fill: var(--wx-sun);
+}
+
+/* Weather at a flight's destination, in its row of the flight card. */
+.dest-wx {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.dest-wx .wx-svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Clouds are an infrared picture: cold cloud tops white, the warm ground dark. Screen blending
+   shows only the clouds, as white veils; on the light map the picture is inverted and multiplied,
+   so they show as soft grey shade instead. */
+.leaflet-weather-pane[data-kind='clouds'] {
+  mix-blend-mode: screen;
+  filter: contrast(1.35) brightness(1.05);
+}
+
+.leaflet-weather-pane[data-kind='clouds'][data-map='light'] {
+  mix-blend-mode: multiply;
+  filter: invert(1) brightness(1.18) contrast(1.15);
+  opacity: 0.65;
 }
 
 .about {
@@ -1615,6 +1838,16 @@ dd.danger {
   .flight-body {
     overflow-y: auto;
     overscroll-behavior: contain;
+  }
+
+  .wx-chip {
+    top: auto;
+    bottom: 12px;
+    max-width: 320px;
+  }
+
+  body.panel-open .wx-chip {
+    left: calc(12px + var(--panel-w) + 12px);
   }
 
   body.panel-open .notes {
