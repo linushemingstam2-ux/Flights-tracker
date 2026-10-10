@@ -93,14 +93,8 @@ export const AircraftLayer = L.Layer.extend({
 
   _frame() {
     this._raf = requestAnimationFrame(this._frame);
-    if (!this._map) return;
-    if (!this._animating) this.draw(Date.now());
-    this.fire('frame'); // after drawing, so Liquid Glass can show this frame through it
-  },
-
-  /** The canvas the aircraft are drawn on (Liquid Glass reads it). */
-  getCanvas() {
-    return this._canvas;
+    if (!this._map || this._animating) return;
+    this.draw(Date.now());
   },
 
   /** The aircraft drawn nearest to a container point, within `radius` px. */
