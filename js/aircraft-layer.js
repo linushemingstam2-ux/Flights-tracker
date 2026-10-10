@@ -299,33 +299,38 @@ export const AircraftLayer = L.Layer.extend({
     };
     ctx.save();
     ctx.textBaseline = 'top';
-    ctx.lineJoin = 'round';
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = 'rgba(8, 12, 18, 0.85)';
-    ctx.font = '600 11px system-ui, sans-serif';
     // The selected aircraft, then the highest (drawn on top), get first claim on label space.
     const order = hits.filter((hit) => hit.ac === selected);
     for (let i = hits.length - 1; i >= 0; i--) if (hits[i].ac !== selected) order.push(hits[i]);
     for (const { ac, x, y } of order) {
+      const isSelected = ac === selected;
       const text = ac.callsign || ac.reg || ac.hex.toUpperCase();
+      ctx.font = '700 11px system-ui, sans-serif';
       if (ac._label !== text) {
         ac._label = text;
         ac._labelW = ctx.measureText(text).width;
       }
       const sub = detailed ? [shortAlt(ac, o.metric), ac.type].filter(Boolean).join(' · ') : '';
-      const lx = x + 13;
-      const ly = y + 5;
-      const w = Math.max(ac._labelW, sub.length * 5.6);
-      if (!claim(lx, ly, lx + w, ly + (sub ? 25 : 12), ac === selected)) continue;
-      ctx.strokeText(text, lx, ly);
-      ctx.fillStyle = ac === selected ? '#ffffff' : '#e8edf3';
-      ctx.fillText(text, lx, ly);
+      ctx.font = '500 10px system-ui, sans-serif';
+      const subW = sub ? ctx.measureText(sub).width : 0;
+      // A small dark tag to the lower right of the aircraft, like the big flight radars.
+      const bx = x + 12;
+      const by = y + 6;
+      const bw = Math.ceil(Math.max(ac._labelW, subW)) + 10;
+      const bh = sub ? 29 : 16;
+      if (!claim(bx, by, bx + bw, by + bh, isSelected)) continue;
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(bx, by, bw, bh, 4);
+      else ctx.rect(bx, by, bw, bh);
+      ctx.fillStyle = isSelected ? 'rgba(255, 77, 58, 0.92)' : 'rgba(12, 17, 27, 0.8)';
+      ctx.fill();
+      ctx.font = '700 11px system-ui, sans-serif';
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(text, bx + 5, by + 3);
       if (sub) {
         ctx.font = '500 10px system-ui, sans-serif';
-        ctx.strokeText(sub, lx, ly + 13);
-        ctx.fillStyle = '#9fb0c3';
-        ctx.fillText(sub, lx, ly + 13);
-        ctx.font = '600 11px system-ui, sans-serif';
+        ctx.fillStyle = isSelected ? '#ffe3de' : '#a9b6c6';
+        ctx.fillText(sub, bx + 5, by + 16);
       }
     }
     ctx.restore();

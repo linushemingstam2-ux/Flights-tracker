@@ -1,9 +1,9 @@
 // Flight radar app: map, live polling, selection, search, filters and settings.
 
 import { AircraftStore } from './store.js';
-import { AircraftLayer } from './aircraft-layer.js';
-import { Panel } from './panel.js';
-import { createDataSource } from './datasource.js?v=6';
+import { AircraftLayer } from './aircraft-layer.js?v=7';
+import { Panel } from './panel.js?v=7';
+import { createDataSource } from './datasource.js?v=7';
 import { SimSource } from './sim.js';
 import { loadSettings, saveSettings, makeFilter, DEFAULTS } from './settings.js';
 import { svgIcon, shapeFor, altitudeHue, CLASSIC_FILL } from './icons.js';
@@ -334,7 +334,7 @@ map.on('click', (e) => {
   const ac = layer.hitTest(e.containerPoint, coarsePointer ? 24 : 15);
   if (ac) select(ac.hex);
   else deselect();
-  closePopovers();
+  closeSheets();
 });
 
 map.on('mousemove', (e) => {
@@ -533,25 +533,41 @@ searchInput.addEventListener('focus', () => {
   if (searchInput.value.trim()) renderResults();
 });
 
-// ── Popovers: filters & settings ─────────────────────────────────────────
+// ── Sheets: map, filters & settings (opened from the tab bar) ────────────
 
-const popovers = { filters: $('btn-filters'), settings: $('btn-settings') };
+const sheetButtons = [...document.querySelectorAll('.tab[data-sheet]')];
 
-function closePopovers(except) {
-  for (const [id, btn] of Object.entries(popovers)) {
-    if (id === except) continue;
-    $(id).hidden = true;
+function closeSheets() {
+  for (const btn of sheetButtons) {
+    $(btn.dataset.sheet).hidden = true;
     btn.setAttribute('aria-expanded', 'false');
   }
+  $('sheet-backdrop').hidden = true;
 }
 
-for (const [id, btn] of Object.entries(popovers)) {
+for (const btn of sheetButtons) {
   btn.addEventListener('click', () => {
-    const open = $(id).hidden;
-    closePopovers(id);
-    $(id).hidden = !open;
-    btn.setAttribute('aria-expanded', String(open));
+    const wasOpen = !$(btn.dataset.sheet).hidden;
+    closeSheets();
+    if (wasOpen) return;
+    $(btn.dataset.sheet).hidden = false;
+    $('sheet-backdrop').hidden = false;
+    btn.setAttribute('aria-expanded', 'true');
   });
+}
+$('sheet-backdrop').addEventListener('click', closeSheets);
+
+/** A group of role="radio" buttons: mark `value` as chosen and call `onPick` on taps. */
+function bindChoice(group, value, onPick) {
+  const buttons = [...group.querySelectorAll('[role="radio"]')];
+  const mark = (v) => buttons.forEach((b) => b.setAttribute('aria-checked', String(b.dataset.value === v)));
+  mark(value);
+  for (const b of buttons) {
+    b.addEventListener('click', () => {
+      mark(b.dataset.value);
+      onPick(b.dataset.value);
+    });
+  }
 }
 
 function persist() {
@@ -615,26 +631,22 @@ function bindFilters() {
 const syncFilters = bindFilters();
 
 function bindSettings() {
-  const mapSel = $('s-map');
-  const color = $('s-color');
   const src = $('s-source');
   const labels = $('s-labels');
   const trails = $('s-trails');
   const metric = $('s-metric');
-  mapSel.value = settings.mapStyle;
-  color.value = settings.colorMode;
   src.value = settings.source;
   labels.checked = settings.labels;
   trails.checked = settings.allTrails;
   metric.checked = settings.metric;
 
-  mapSel.addEventListener('change', () => {
-    settings.mapStyle = mapSel.value;
+  bindChoice($('s-map'), settings.mapStyle, (v) => {
+    settings.mapStyle = v;
     applyMapStyle();
     persist();
   });
-  color.addEventListener('change', () => {
-    settings.colorMode = color.value;
+  bindChoice($('s-color'), settings.colorMode, (v) => {
+    settings.colorMode = v;
     renderLegend();
     persist();
   });
@@ -690,8 +702,9 @@ $('btn-locate').addEventListener('click', () => {
 document.addEventListener('keydown', (e) => {
   const typing = e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement;
   if (e.key === 'Escape') {
-    closePopovers();
-    if (!typing) deselect();
+    const sheetOpen = sheetButtons.some((b) => !$(b.dataset.sheet).hidden);
+    closeSheets();
+    if (!typing && !sheetOpen) deselect();
   } else if (typing || e.metaKey || e.ctrlKey || e.altKey) {
     return;
   } else if (e.key === '/') {
@@ -700,11 +713,6 @@ document.addEventListener('keydown', (e) => {
   } else if (e.key === 'f' || e.key === 'F') {
     setFollowing(!following);
   }
-});
-
-document.addEventListener('mousedown', (e) => {
-  const inside = e.target.closest('.popover, .tool');
-  if (!inside) closePopovers();
 });
 
 let toastTimer = null;
