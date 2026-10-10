@@ -20,7 +20,7 @@
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="favicon.svg" />
     <link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
-    <link rel="stylesheet" href="css/app.css?v=15" />
+    <link rel="stylesheet" href="css/app.css?v=16" />
   </head>
   <body>
     <main id="map" aria-label="Map of live air traffic"></main>
@@ -31,8 +31,7 @@
         <a class="brand" href="./" aria-label="Tracker – live flight radar">
           <svg viewBox="0 0 32 32" aria-hidden="true"><path fill="currentColor" d="M16 1C17 1 17.6 2.4 17.6 4L17.6 11 30 18.5 30 20.5 17.6 16.5 17.4 25 21.5 28.2 21.5 29.8 16.6 28.6 16 30.5 15.4 28.6 10.5 29.8 10.5 28.2 14.6 25 14.4 16.5 2 20.5 2 18.5 14.4 11 14.4 4C14.4 2.4 15 1 16 1Z" transform="rotate(45 16 16)"/></svg>
         </a>
-        <input id="search" type="search" placeholder="Search flights and aircraft" autocomplete="off" spellcheck="false" enterkeyhint="search" aria-label="Search flights" aria-controls="search-results" aria-autocomplete="list" />
-        <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.5 3a7.5 7.5 0 0 1 5.96 12.06l4.24 4.24-1.4 1.4-4.24-4.24A7.5 7.5 0 1 1 10.5 3Zm0 2a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11Z" fill="currentColor"/></svg>
+        <input id="search" type="search" placeholder="Search flights" autocomplete="off" spellcheck="false" enterkeyhint="search" aria-label="Search flights" aria-controls="search-results" aria-autocomplete="list" />
         <ul id="search-results" class="search-results" role="listbox" hidden></ul>
       </div>
 
@@ -131,7 +130,7 @@
         </div>
         <span id="p-chip" class="chip"></span>
         <button id="p-close" class="icon-btn" type="button" aria-label="Close details">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m6.4 5 5.6 5.6L17.6 5 19 6.4 13.4 12l5.6 5.6-1.4 1.4-5.6-5.6L6.4 19 5 17.6l5.6-5.6L5 6.4 6.4 5Z"/></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg>
         </button>
       </div>
 
@@ -192,6 +191,6 @@
     </aside>
 
     <script src="vendor/leaflet/leaflet.js"></script>
-    <script type="module" src="js/main.js?v=17"></script>
+    <script type="module" src="js/main.js?v=18"></script>
   </body>
 </html>

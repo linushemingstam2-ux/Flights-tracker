@@ -552,7 +552,7 @@ function bindFilters() {
     text.value = f.text;
     min.value = f.altMin;
     max.value = f.altMax;
-    for (const r of [min, max]) r.style.setProperty('--fill', `${(r.value / r.max) * 100}%`);
+    for (const r of [min, max]) r.style.setProperty('--progress', `${(r.value / r.max) * 100}%`);
     ground.checked = f.hideGround;
     mil.checked = f.militaryOnly;
     const fmt = (v) => `${nf.format(v)} ft`;

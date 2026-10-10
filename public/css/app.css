@@ -1,64 +1,91 @@
-/* Tracker – mobile-first flight radar UI. Wide screens get a side panel (see the end). */
+/*
+ * Tracker – mobile-first flight radar UI, following Apple's design principles:
+ *   clarity  – system type, plain words, one accent colour, nothing decorative;
+ *   deference – the map is the content, so every control floats over it as Liquid Glass;
+ *   depth    – translucent, blurred layers with a bright rim and soft shadow, moved by springs.
+ * Wide screens get floating side panels (see the end).
+ */
 
 :root {
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --fab: 48px;
-  --search-h: 48px;
+  --search-h: 50px;
   --panel-w: 380px;
+  --inset: 8px; /* floating sheets and cards sit this far from the screen edges */
+  --radius-sheet: 38px; /* concentric with the phone's own corners */
+  --radius-cell: 18px;
 
-  --bg: #0e1420;
-  --surface: #141c2a;
-  --surface-2: #1c2637;
-  --surface-3: #283548;
-  --glass: rgba(18, 25, 38, 0.94);
-  --border: rgba(255, 255, 255, 0.08);
-  --text: #eef2f7;
-  --muted: #94a3b8;
-  --accent: #ffcc1a;
-  --accent-ink: #1a1400;
-  --danger: #ff4d5e;
-  --ok: #3ddc84;
-  --shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
-  --link: var(--accent);
-  --warn: #f5a623;
+  /* Apple system colours (dark appearance) */
+  --label: #ffffff;
+  --label-2: rgba(235, 235, 245, 0.62);
+  --label-3: rgba(235, 235, 245, 0.32);
+  --separator: rgba(84, 84, 88, 0.55);
+  --fill: rgba(120, 120, 128, 0.36);
+  --fill-2: rgba(120, 120, 128, 0.24);
+  --fill-3: rgba(118, 118, 128, 0.18);
+  --cell: rgba(255, 255, 255, 0.07);
+  --tint: #ffd60a;
+  --tint-ink: #1c1600;
+  --green: #30d158;
+  --red: #ff453a;
+  --orange: #ff9f0a;
+  --link: var(--tint);
+  --bg: #000000;
   --map-bg: #0e1621;
-  --attrib-bg: rgba(14, 20, 32, 0.7);
-  --attrib-link: #c2cddb;
-  --fab-border: rgba(255, 255, 255, 0.1);
-  --fab-shadow: 0 6px 18px rgba(0, 0, 0, 0.38), 0 1px 0 rgba(255, 255, 255, 0.06) inset;
-  --scrim: rgba(0, 0, 0, 0.35);
-  --sheet-shadow: 0 -10px 30px rgba(0, 0, 0, 0.45);
-  --grip: rgba(255, 255, 255, 0.25);
-  --btn-on: #fff;
-  --btn-on-ink: var(--accent-ink);
+
+  /* Liquid Glass */
+  --glass: rgba(30, 30, 32, 0.5);
+  --glass-thick: rgba(28, 28, 30, 0.74);
+  --glass-filter: blur(22px) saturate(190%) brightness(0.92);
+  --glass-sheen: rgba(255, 255, 255, 0.08);
+  --glass-rim: linear-gradient(145deg, rgba(255, 255, 255, 0.38), rgba(255, 255, 255, 0.07) 32%,
+      rgba(255, 255, 255, 0.03) 62%, rgba(255, 255, 255, 0.2));
+  --glass-shadow: 0 10px 34px rgba(0, 0, 0, 0.34), 0 1px 3px rgba(0, 0, 0, 0.28);
+  --scrim: rgba(0, 0, 0, 0.22);
+  --grip: rgba(235, 235, 245, 0.3);
+  --btn-on: #ffffff;
+  --btn-on-ink: #000000;
+
+  --spring: cubic-bezier(0.34, 1.5, 0.64, 1); /* a little overshoot, like a UIKit spring */
+  --ease-sheet: cubic-bezier(0.32, 0.72, 0, 1); /* the iOS sheet curve */
+
   color-scheme: dark;
-  font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, 'Segoe UI', Roboto, Inter,
+    sans-serif;
 }
 
-/* Light mode: white surfaces and dark ink, set on <html> together with the light map. */
+/* Light mode (light map, and satellite): white glass and dark ink. */
 :root[data-theme='light'] {
-  --bg: #f3f5f8;
-  --surface: #ffffff;
-  --surface-2: #f1f3f7;
-  --surface-3: #e4e8ef;
-  --glass: rgba(255, 255, 255, 0.94);
-  --border: rgba(15, 23, 42, 0.09);
-  --text: #0f172a;
-  --muted: #64748b;
-  --shadow: 0 10px 30px rgba(15, 23, 42, 0.14);
-  --link: #a16207;
-  --warn: #b45309;
+  --label: #000000;
+  --label-2: rgba(60, 60, 67, 0.62);
+  --label-3: rgba(60, 60, 67, 0.3);
+  --separator: rgba(60, 60, 67, 0.2);
+  --fill: rgba(120, 120, 128, 0.2);
+  --fill-2: rgba(120, 120, 128, 0.14);
+  --fill-3: rgba(118, 118, 128, 0.1);
+  --cell: rgba(255, 255, 255, 0.72);
+  --tint: #ffcc00;
+  --tint-ink: #1c1600;
+  --green: #34c759;
+  --red: #ff3b30;
+  --orange: #c93400;
+  --link: #a05a00;
+  --bg: #f2f2f7;
   --map-bg: #f2efe9;
-  --attrib-bg: rgba(255, 255, 255, 0.75);
-  --attrib-link: #475569;
-  --fab-border: rgba(15, 23, 42, 0.08);
-  --fab-shadow: 0 6px 18px rgba(15, 23, 42, 0.16), 0 1px 0 rgba(255, 255, 255, 0.8) inset;
-  --scrim: rgba(15, 23, 42, 0.18);
-  --sheet-shadow: 0 -8px 30px rgba(15, 23, 42, 0.14);
-  --grip: rgba(15, 23, 42, 0.2);
-  --btn-on: #0f172a;
+
+  --glass: rgba(255, 255, 255, 0.6);
+  --glass-thick: rgba(246, 246, 248, 0.8);
+  --glass-filter: blur(22px) saturate(190%) brightness(1.12);
+  --glass-sheen: rgba(255, 255, 255, 0.55);
+  --glass-rim: linear-gradient(145deg, rgba(255, 255, 255, 1), rgba(255, 255, 255, 0.45) 32%,
+      rgba(255, 255, 255, 0.2) 62%, rgba(255, 255, 255, 0.85));
+  --glass-shadow: 0 10px 34px rgba(0, 0, 0, 0.13), 0 1px 3px rgba(0, 0, 0, 0.08);
+  --scrim: rgba(0, 0, 0, 0.1);
+  --grip: rgba(60, 60, 67, 0.3);
+  --btn-on: #000000;
   --btn-on-ink: #ffffff;
+
   color-scheme: light;
 }
 
@@ -78,13 +105,14 @@ body {
   height: 100%;
   overflow: hidden;
   background: var(--bg);
-  color: var(--text);
+  color: var(--label);
   overscroll-behavior: none;
 }
 
 body {
-  font-size: 14px;
-  line-height: 1.4;
+  font-size: 15px;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
 }
@@ -94,6 +122,7 @@ input,
 select {
   font: inherit;
   color: inherit;
+  letter-spacing: inherit;
 }
 
 button {
@@ -102,20 +131,67 @@ button {
 
 a {
   color: var(--link);
+  text-decoration: none;
 }
 
 kbd {
   font: 600 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
   padding: 2px 5px;
-  border: 1px solid var(--border);
-  border-bottom-width: 2px;
-  border-radius: 4px;
-  color: var(--muted);
+  border-radius: 5px;
+  background: var(--fill-3);
+  color: var(--label-2);
 }
 
 :focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--tint);
   outline-offset: 2px;
+}
+
+/* ── Liquid Glass ────────────────────────────────────────────
+   A translucent layer that blurs and brightens what is behind it, with a soft sheen from above,
+   a light-catching rim (brightest at the top-left and bottom-right edges) and a floating shadow. */
+
+.search,
+.fab,
+.notice,
+.demo-badge,
+.banner,
+.toast,
+.leaflet-control-zoom.leaflet-bar {
+  background: linear-gradient(180deg, var(--glass-sheen), transparent 60%), var(--glass);
+  -webkit-backdrop-filter: var(--glass-filter);
+  backdrop-filter: var(--glass-filter);
+  box-shadow: var(--glass-shadow);
+}
+
+/* Large surfaces use thicker glass so text on them stays easy to read. */
+.sheet,
+.flight,
+.search-results {
+  background: linear-gradient(180deg, var(--glass-sheen), transparent 40%), var(--glass-thick);
+  -webkit-backdrop-filter: var(--glass-filter);
+  backdrop-filter: var(--glass-filter);
+  box-shadow: var(--glass-shadow), inset 0 0 0 0.5px rgba(255, 255, 255, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+.search::before,
+.fab::before,
+.notice::before,
+.demo-badge::before,
+.banner::before,
+.toast::before,
+.flight::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  padding: 1px;
+  border-radius: inherit;
+  background: var(--glass-rim);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
 }
 
 /* ── Map ─────────────────────────────────────────────────── */
@@ -154,25 +230,19 @@ kbd {
   display: none;
 }
 
-.leaflet-control-zoom a {
-  background: var(--glass);
-  color: var(--text);
-  border-color: var(--border);
-}
-
-.leaflet-control-zoom a:hover {
-  background: var(--surface-3);
-  color: var(--text);
-}
-
 .leaflet-control-attribution {
-  background: var(--attrib-bg) !important;
-  color: var(--muted);
+  margin: 0 !important;
+  padding: 2px 8px !important;
+  border-radius: 9px 0 0 0;
+  background: var(--glass) !important;
+  -webkit-backdrop-filter: var(--glass-filter);
+  backdrop-filter: var(--glass-filter);
+  color: var(--label-2);
   font-size: 10px;
 }
 
 .leaflet-control-attribution a {
-  color: var(--attrib-link);
+  color: var(--label-2);
 }
 
 /* ── Top: search and notices ─────────────────────────────── */
@@ -200,15 +270,8 @@ kbd {
   align-items: center;
   width: 100%;
   height: var(--search-h);
-  padding: 0 14px 0 6px;
+  padding: 0 8px 0 7px;
   border-radius: calc(var(--search-h) / 2);
-  background: var(--glass);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow);
-}
-
-.search:focus-within {
-  border-color: rgba(255, 204, 26, 0.6);
 }
 
 .brand {
@@ -218,13 +281,14 @@ kbd {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: var(--accent);
-  color: var(--accent-ink);
+  background: var(--tint);
+  color: var(--tint-ink);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 1px 3px rgba(0, 0, 0, 0.18);
 }
 
 .brand svg {
-  width: 22px;
-  height: 22px;
+  width: 21px;
+  height: 21px;
 }
 
 .search input {
@@ -235,27 +299,20 @@ kbd {
   border: 0;
   background: transparent;
   outline: none;
-  font-size: 16px; /* 16px stops iOS zooming in on focus */
+  font-size: 17px; /* the iOS body size; also, 16px+ stops iOS zooming in on focus */
 }
 
 .search input::placeholder {
-  color: var(--muted);
+  color: var(--label-2);
 }
 
 .search input::-webkit-search-cancel-button {
-  filter: invert(0.7);
-}
-
-.search-icon {
-  flex-shrink: 0;
-  width: 20px;
-  height: 20px;
-  color: var(--muted);
+  filter: grayscale(1) opacity(0.6);
 }
 
 .search-results {
   position: absolute;
-  top: calc(var(--search-h) + 6px);
+  top: calc(var(--search-h) + 8px);
   left: 0;
   right: 0;
   margin: 0;
@@ -263,36 +320,36 @@ kbd {
   list-style: none;
   max-height: 60vh;
   overflow: auto;
-  border-radius: 16px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow);
+  border-radius: 26px;
+  animation: pop-in 0.32s var(--ease-sheet);
+  transform-origin: top center;
 }
 
 .search-results li {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px;
-  border-radius: 10px;
+  min-height: 56px;
+  padding: 8px 12px;
+  border-radius: 20px;
   cursor: pointer;
 }
 
 .search-results li:hover,
 .search-results li[aria-selected='true'] {
-  background: var(--surface-3);
+  background: var(--fill-3);
 }
 
 .search-results li.empty {
-  color: var(--muted);
+  color: var(--label-2);
   cursor: default;
   background: none;
 }
 
 .sr-icon svg {
   display: block;
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   transform: rotate(45deg);
 }
 
@@ -302,12 +359,14 @@ kbd {
 
 .sr-main strong {
   display: block;
+  font-size: 17px;
+  font-weight: 600;
 }
 
 .sr-main span,
 .sr-alt {
-  color: var(--muted);
-  font-size: 12px;
+  color: var(--label-2);
+  font-size: 13px;
 }
 
 .sr-alt {
@@ -328,42 +387,44 @@ kbd {
 .notice,
 .demo-badge,
 .banner {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
   max-width: 100%;
-  padding: 8px 12px;
-  border-radius: 14px;
-  background: var(--glass);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow);
-  font-size: 12px;
-}
-
-.notice {
-  border-color: rgba(255, 204, 26, 0.35);
-}
-
-.demo-badge {
-  border-color: rgba(255, 204, 26, 0.7);
+  padding: 9px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
 }
 
 .demo-badge strong {
-  padding: 1px 6px;
-  border-radius: 4px;
-  background: var(--accent);
-  color: var(--accent-ink);
+  padding: 2px 7px;
+  border-radius: 7px;
+  background: var(--tint);
+  color: var(--tint-ink);
   font-size: 11px;
+  letter-spacing: 0.02em;
 }
 
 .banner {
   flex-wrap: wrap;
-  border-color: rgba(255, 77, 94, 0.6);
+}
+
+.banner-text::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 7px;
+  border-radius: 50%;
+  background: var(--red);
+  vertical-align: 1px;
 }
 
 .banner-detail {
   flex-basis: 100%;
-  color: var(--muted);
+  color: var(--label-2);
   font-size: 11px;
 }
 
@@ -375,11 +436,11 @@ kbd {
 .demo-badge button,
 .banner button {
   height: 30px;
-  padding: 0 12px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--surface-3);
-  font-size: 12px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 15px;
+  background: var(--fill-2);
+  font-size: 13px;
   font-weight: 600;
 }
 
@@ -388,16 +449,14 @@ kbd {
 .toast {
   position: fixed;
   left: 50%;
-  bottom: calc(var(--safe-bottom) + 30px);
+  bottom: calc(var(--safe-bottom) + 28px);
   transform: translateX(-50%);
   z-index: 1500;
   max-width: calc(100vw - 32px);
   text-align: center;
-  padding: 10px 16px;
-  border-radius: 12px;
-  background: var(--surface-3);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow);
+  padding: 12px 20px;
+  border-radius: 999px;
+  font-weight: 500;
 }
 
 /* ── Side buttons ────────────────────────────────────────── */
@@ -419,15 +478,11 @@ kbd {
   width: var(--fab);
   height: var(--fab);
   padding: 0;
+  border: 0;
   border-radius: 50%;
-  border: 1px solid var(--fab-border);
-  background: var(--glass);
-  color: var(--text);
-  box-shadow: var(--fab-shadow);
-  backdrop-filter: blur(14px) saturate(1.4);
-  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  color: var(--label);
   cursor: pointer;
-  transition: background-color 0.18s ease, color 0.18s ease, transform 0.12s ease;
+  transition: transform 0.45s var(--spring), background-color 0.25s ease, color 0.25s ease;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -436,23 +491,21 @@ kbd {
   height: 22px;
   fill: none;
   stroke: currentColor;
-  stroke-width: 1.8;
+  stroke-width: 1.9;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 
-.fab:hover {
-  background: var(--surface-3);
-}
-
+/* Pressed glass squeezes, then springs back. */
 .fab:active {
-  transform: scale(0.93);
+  transform: scale(0.88);
+  transition-duration: 0.12s;
 }
 
+/* The open page's button turns into tinted glass. */
 .fab[aria-expanded='true'] {
-  background: var(--accent);
-  border-color: transparent;
-  color: var(--accent-ink);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.35), transparent 60%), var(--tint);
+  color: var(--tint-ink);
 }
 
 /* "My location" is an action rather than a page, so it sits a little apart. */
@@ -462,43 +515,44 @@ kbd {
 
 .badge {
   position: absolute;
-  top: 7px;
-  right: 7px;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 0 2px var(--surface);
+  background: var(--tint);
+  box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.25);
 }
 
 .fab[aria-expanded='true'] .badge {
-  background: var(--accent-ink);
-  box-shadow: 0 0 0 2px var(--accent);
+  background: var(--tint-ink);
+  box-shadow: none;
 }
 
-/* ── Sheets (map, filters, settings) ─────────────────────── */
+/* ── Sheets (settings, filters) ──────────────────────────── */
 
 .backdrop {
   position: fixed;
   inset: 0;
   z-index: 1250;
   background: var(--scrim);
+  animation: fade-in 0.3s ease;
 }
 
+/* Floating, inset sheets with corners concentric to the phone's, as in iOS. */
 .sheet {
   position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  left: var(--inset);
+  right: var(--inset);
+  bottom: var(--inset);
   z-index: 1300;
-  max-height: 82%;
+  max-height: calc(88% - var(--safe-top));
   overflow: auto;
   overscroll-behavior: contain;
-  padding: 4px 18px calc(18px + var(--safe-bottom));
-  border-radius: 20px 20px 0 0;
-  background: var(--surface);
-  box-shadow: var(--sheet-shadow);
-  animation: slide-up 0.22s ease-out;
+  padding: 2px 16px max(20px, var(--safe-bottom));
+  border-radius: var(--radius-sheet);
+  animation: sheet-in 0.5s var(--ease-sheet);
 }
 
 .sheet-head {
@@ -506,94 +560,131 @@ kbd {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin: 0 0 16px;
+  margin: 2px 0 18px;
+  padding: 0 4px;
 }
 
 .sheet-head h2 {
   margin: 0;
-  font-size: 22px;
+  font-size: 28px;
   font-weight: 700;
-  letter-spacing: -0.01em;
-}
-
-.sheet-close svg {
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
 }
 
 .sheet-grip {
   display: flex;
   justify-content: center;
   width: 100%;
-  padding: 8px 0 6px;
+  padding: 7px 0 7px;
   border: 0;
   background: none;
 }
 
 .sheet-grip span {
-  width: 40px;
+  width: 36px;
   height: 5px;
   border-radius: 3px;
   background: var(--grip);
 }
 
-@keyframes slide-up {
+@keyframes sheet-in {
   from {
-    transform: translateY(100%);
+    transform: translateY(calc(100% + 24px));
   }
   to {
     transform: none;
   }
 }
 
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94) translateY(-6px);
+  }
+}
+
+/* Form fields: a small header, then content, as in iOS inset-grouped lists. */
 .field {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin-bottom: 14px;
+  margin-bottom: 22px;
+  color: var(--label-2);
   font-size: 13px;
-  color: var(--muted);
+  font-weight: 500;
+}
+
+.field > span {
+  padding: 0 16px;
 }
 
 .field output {
-  color: var(--text);
+  color: var(--label);
   font-weight: 600;
 }
 
 .field input[type='text'],
 .field select {
-  height: 44px;
-  padding: 0 12px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  background: var(--surface-2);
-  color: var(--text);
-  font-size: 16px;
+  height: 50px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: var(--radius-cell);
+  background: var(--cell);
+  color: var(--label);
+  font-size: 17px;
+}
+
+.field input[type='text']::placeholder {
+  color: var(--label-3);
 }
 
 .field input[type='text']:focus,
 .field select:focus {
   outline: none;
-  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--tint);
 }
 
 .range {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+  min-height: 50px;
+  padding: 0 16px;
+  background: var(--cell);
 }
 
+.range:first-of-type {
+  border-radius: var(--radius-cell) var(--radius-cell) 0 0;
+}
+
+.range:last-of-type {
+  border-radius: 0 0 var(--radius-cell) var(--radius-cell);
+}
+
+.range + .range {
+  margin-top: -8px; /* sit flush in one group, like table cells */
+}
+
+.range + .range::before,
 .range span {
-  width: 30px;
-  font-size: 12px;
+  width: 34px;
+  color: var(--label);
+  font-size: 15px;
+  font-weight: 400;
 }
 
-/* Sliders drawn to match both modes: a slim track filled up to the knob (--fill is set in script). */
+/* iOS-style sliders: a slim track filled up to the knob (--progress is set in script). */
 .range input {
   flex: 1;
-  height: 28px;
+  height: 30px;
   margin: 0;
   background: transparent;
   appearance: none;
@@ -604,163 +695,206 @@ kbd {
 .range input::-webkit-slider-runnable-track {
   height: 4px;
   border-radius: 2px;
-  background: linear-gradient(to right, var(--accent) var(--fill, 0%), var(--surface-3) var(--fill, 0%));
+  background: linear-gradient(to right, var(--tint) var(--progress, 0%), var(--fill) var(--progress, 0%));
 }
 
 .range input::-moz-range-track {
   height: 4px;
   border-radius: 2px;
-  background: var(--surface-3);
+  background: var(--fill);
 }
 
 .range input::-moz-range-progress {
   height: 4px;
   border-radius: 2px;
-  background: var(--accent);
+  background: var(--tint);
 }
 
 .range input::-webkit-slider-thumb {
-  width: 22px;
-  height: 22px;
-  margin-top: -9px;
+  width: 27px;
+  height: 27px;
+  margin-top: -11.5px;
   border: 0;
   border-radius: 50%;
   background: #fff;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35), 0 0 0 0.5px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15), 0 1px 1px rgba(0, 0, 0, 0.16), 0 0 0 0.5px rgba(0, 0, 0, 0.04);
   -webkit-appearance: none;
 }
 
 .range input::-moz-range-thumb {
-  width: 22px;
-  height: 22px;
+  width: 27px;
+  height: 27px;
   border: 0;
   border-radius: 50%;
   background: #fff;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35), 0 0 0 0.5px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15), 0 1px 1px rgba(0, 0, 0, 0.16), 0 0 0 0.5px rgba(0, 0, 0, 0.04);
 }
 
+/* Switch rows, grouped like iOS table cells with hairline separators. */
 .toggle {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   min-height: 52px;
-  border-bottom: 1px solid var(--border);
+  padding: 0 16px;
+  background: var(--cell);
+  font-size: 17px;
   cursor: pointer;
+}
+
+.toggle:not(.toggle + .toggle) {
+  border-top-left-radius: var(--radius-cell);
+  border-top-right-radius: var(--radius-cell);
+}
+
+.toggle:not(:has(+ .toggle)) {
+  border-bottom-left-radius: var(--radius-cell);
+  border-bottom-right-radius: var(--radius-cell);
 }
 
 .toggle input {
   position: relative;
   flex-shrink: 0;
-  width: 48px;
-  height: 28px;
+  width: 51px;
+  height: 31px;
   margin: 0;
-  border-radius: 14px;
-  background: var(--surface-3);
+  border-radius: 16px;
+  background: var(--fill);
   appearance: none;
   -webkit-appearance: none;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background-color 0.25s ease;
 }
 
 .toggle input::after {
   content: '';
   position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 22px;
-  height: 22px;
+  top: 2px;
+  left: 2px;
+  width: 27px;
+  height: 27px;
   border-radius: 50%;
   background: #fff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
-  transition: transform 0.2s;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15), 0 3px 1px rgba(0, 0, 0, 0.06);
+  transition: transform 0.4s var(--spring);
 }
 
 .toggle input:checked {
-  background: var(--accent);
+  background: var(--green);
 }
 
 .toggle input:checked::after {
   transform: translateX(20px);
 }
 
+/* Appearance picker: previews with a round check underneath, like iOS Display settings. */
 .style-cards {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  margin-bottom: 16px;
+  gap: 12px;
+  margin-bottom: 22px;
+  padding: 16px 12px 14px;
+  border-radius: var(--radius-cell);
+  background: var(--cell);
 }
 
 .style-cards button {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 6px 6px 8px;
-  border-radius: 14px;
-  border: 2px solid transparent;
-  background: var(--surface-2);
-  font-size: 12px;
-  font-weight: 600;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 13px;
+  font-weight: 500;
 }
 
-.style-cards button[aria-checked='true'] {
-  border-color: var(--accent);
+.style-cards button::after {
+  content: '';
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px var(--label-3);
+  transition: background-color 0.2s ease;
+}
+
+.style-cards button[aria-checked='true']::after {
+  background: var(--tint)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 22'%3E%3Cpath d='M6.5 11.3l3 3 6-6.4' fill='none' stroke='%231c1600' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+    center / 100% no-repeat;
+  box-shadow: none;
 }
 
 .swatch {
   position: relative;
   display: block;
   width: 100%;
-  aspect-ratio: 4 / 3;
-  border-radius: 9px;
+  aspect-ratio: 3 / 4;
+  border-radius: 14px;
+  box-shadow: 0 0 0 0.5px var(--separator), 0 2px 8px rgba(0, 0, 0, 0.18);
+  transition: transform 0.4s var(--spring);
 }
 
-/* A tiny search bar on each preview hints that the whole app changes colour, not just the map. */
+.style-cards button:active .swatch {
+  transform: scale(0.95);
+}
+
+/* A tiny glass search bar on each preview: the whole app changes colour, not just the map. */
 .swatch::after {
   content: '';
   position: absolute;
-  top: 9%;
-  left: 9%;
-  right: 9%;
-  height: 17%;
+  top: 8%;
+  left: 10%;
+  right: 10%;
+  height: 12%;
   border-radius: 999px;
-  background: rgba(18, 25, 38, 0.94);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+  background: rgba(40, 40, 44, 0.85);
+  box-shadow: inset 0 0.5px 0 rgba(255, 255, 255, 0.25), 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 
 .swatch-light::after,
 .swatch-satellite::after {
-  background: #fff;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.25);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: inset 0 0.5px 0 #fff, 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .swatch-dark {
   background: linear-gradient(115deg, transparent 46%, #4b4636 47%, #4b4636 50%, transparent 51%),
     linear-gradient(25deg, transparent 60%, #3b3e45 61%, #3b3e45 63%, transparent 64%),
-    radial-gradient(circle at 75% 30%, #233041 22%, transparent 23%), #16191f;
+    radial-gradient(circle at 75% 55%, #233041 22%, transparent 23%), #16191f;
 }
 
 .swatch-light {
   background: linear-gradient(115deg, transparent 46%, #f6d58a 47%, #f6d58a 50%, transparent 51%),
     linear-gradient(25deg, transparent 60%, #ffffff 61%, #ffffff 63%, transparent 64%),
-    radial-gradient(circle at 75% 30%, #aad3df 22%, transparent 23%), #efe9dc;
+    radial-gradient(circle at 75% 55%, #aad3df 22%, transparent 23%), #efe9dc;
 }
 
 .swatch-satellite {
-  background: radial-gradient(circle at 75% 30%, #1d3b52 22%, transparent 23%),
+  background: radial-gradient(circle at 75% 55%, #1d3b52 22%, transparent 23%),
     radial-gradient(circle at 20% 80%, #5a6b3a 30%, transparent 31%),
     linear-gradient(135deg, #3d5230, #6b6447 55%, #2f4426);
 }
 
 .about {
-  margin: 16px 0 0;
-  color: var(--muted);
-  font-size: 12px;
+  margin: 10px 0 0;
+  padding: 0 16px;
+  color: var(--label-2);
+  font-size: 13px;
 }
 
 .about.keys {
-  margin-top: 8px;
+  margin-top: 10px;
+}
+
+/* Keyboard shortcuts only matter where there is a keyboard. */
+@media (pointer: coarse) {
+  .about.keys {
+    display: none;
+  }
 }
 
 /* ── Buttons ─────────────────────────────────────────────── */
@@ -771,20 +905,27 @@ kbd {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 44px;
-  padding: 0 12px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  background: var(--surface-2);
-  color: var(--text);
-  font-weight: 700;
+  height: 50px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--fill-2);
+  color: var(--label);
+  font-size: 17px;
+  font-weight: 600;
   text-decoration: none;
+  transition: transform 0.45s var(--spring), background-color 0.2s ease;
+}
+
+.btn:active,
+.btn-secondary:active {
+  transform: scale(0.95);
+  transition-duration: 0.12s;
 }
 
 .btn {
-  background: var(--accent);
-  color: var(--accent-ink);
-  border-color: transparent;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.3), transparent 60%), var(--tint);
+  color: var(--tint-ink);
 }
 
 .btn.active {
@@ -793,47 +934,56 @@ kbd {
 }
 
 .btn-secondary:hover {
-  background: var(--surface-3);
+  background: var(--fill);
 }
 
 .btn-secondary.wide {
   width: 100%;
-  margin-top: 16px;
+  margin-top: 22px;
 }
 
 .icon-btn {
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
+  padding: 0;
   border: 0;
   border-radius: 50%;
-  background: var(--surface-2);
-  color: var(--text);
+  background: var(--fill-2);
+  color: var(--label-2);
+  transition: transform 0.45s var(--spring);
+}
+
+.icon-btn:active {
+  transform: scale(0.88);
+  transition-duration: 0.12s;
 }
 
 .icon-btn svg {
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
 }
 
-/* ── Selected flight: bottom card on phones ──────────────── */
+/* ── Selected flight: floating card on phones ────────────── */
 
 .flight {
   position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  left: var(--inset);
+  right: var(--inset);
+  bottom: var(--inset);
   z-index: 1200;
   display: flex;
   flex-direction: column;
-  max-height: 88%;
-  padding-bottom: var(--safe-bottom);
-  border-radius: 20px 20px 0 0;
-  background: var(--surface);
-  box-shadow: var(--sheet-shadow);
-  animation: slide-up 0.25s ease-out;
+  max-height: calc(88% - var(--safe-top));
+  padding-bottom: max(6px, calc(var(--safe-bottom) - var(--inset)));
+  border-radius: var(--radius-sheet);
+  animation: sheet-in 0.5s var(--ease-sheet);
 }
 
 .flight > .sheet-grip,
@@ -853,17 +1003,18 @@ kbd {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 2px 14px 12px;
+  padding: 0 16px 14px;
 }
 
 .flight-icon {
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  background: var(--accent);
+  background: var(--tint);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 1px 3px rgba(0, 0, 0, 0.18);
 }
 
 .flight-icon svg {
@@ -874,7 +1025,7 @@ kbd {
 }
 
 .flight-icon path {
-  fill: var(--accent-ink);
+  fill: var(--tint-ink);
   stroke: none;
 }
 
@@ -884,15 +1035,15 @@ kbd {
 
 .flight-title h2 {
   margin: 0;
-  font-size: 22px;
-  font-weight: 800;
-  letter-spacing: 0.01em;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   line-height: 1.15;
 }
 
 .flight-sub {
-  color: var(--muted);
-  font-size: 13px;
+  color: var(--label-2);
+  font-size: 15px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -900,12 +1051,12 @@ kbd {
 
 .chip {
   margin-left: auto;
-  padding: 4px 8px;
-  border-radius: 7px;
-  background: var(--surface-3);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.03em;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: var(--fill-2);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
 .chip:empty {
@@ -930,11 +1081,11 @@ kbd {
 
 .photo {
   position: relative;
-  margin: 0 14px 12px;
+  margin: 0 12px 12px;
   aspect-ratio: 16 / 9;
   overflow: hidden;
-  border-radius: 14px;
-  background: var(--surface-2);
+  border-radius: 24px;
+  background: var(--fill-3);
 }
 
 .photo img {
@@ -947,21 +1098,20 @@ kbd {
 .photo figcaption {
   position: absolute;
   inset: auto 0 0 0;
-  padding: 18px 10px 6px;
+  padding: 22px 14px 8px;
   font-size: 11px;
-  background: linear-gradient(transparent, rgba(0, 0, 0, 0.75));
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.6));
 }
 
 .photo figcaption a {
   color: #fff;
-  text-decoration: none;
 }
 
 .route {
-  margin: 0 14px 12px;
-  padding: 12px 14px;
-  border-radius: 14px;
-  background: var(--surface-2);
+  margin: 0 12px 14px;
+  padding: 14px 16px 12px;
+  border-radius: 24px;
+  background: var(--cell);
 }
 
 .route-ends {
@@ -980,15 +1130,15 @@ kbd {
 }
 
 .ap-code {
-  font-size: 28px;
-  font-weight: 800;
-  letter-spacing: 0.02em;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   line-height: 1.1;
 }
 
 .ap-city {
-  color: var(--muted);
-  font-size: 12px;
+  color: var(--label-2);
+  font-size: 13px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -998,46 +1148,46 @@ kbd {
   flex-shrink: 0;
   width: 22px;
   height: 22px;
-  color: var(--accent);
+  color: var(--tint);
 }
 
 .progress {
   position: relative;
   height: 4px;
-  margin: 12px 4px 8px;
+  margin: 14px 4px 8px;
   border-radius: 2px;
-  background: var(--surface-3);
+  background: var(--fill);
 }
 
 .progress-bar {
   width: 0;
   height: 100%;
   border-radius: 2px;
-  background: var(--accent);
+  background: var(--tint);
 }
 
 .progress-dot {
   position: absolute;
   top: 50%;
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
-  background: var(--accent);
-  border: 2px solid var(--surface-2);
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25), inset 0 0 0 4px var(--tint);
   transform: translate(-50%, -50%);
 }
 
 .route-dist {
   display: flex;
   justify-content: space-between;
-  color: var(--muted);
-  font-size: 12px;
+  color: var(--label-2);
+  font-size: 13px;
 }
 
 .route-warning {
   margin: 8px 0 0;
-  font-size: 12px;
-  color: var(--warn);
+  font-size: 13px;
+  color: var(--orange);
 }
 
 dl {
@@ -1045,14 +1195,15 @@ dl {
 }
 
 dt {
-  color: var(--muted);
+  color: var(--label-2);
   font-size: 11px;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
 }
 
 dd {
-  margin: 2px 0 0;
+  margin: 3px 0 0;
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
@@ -1062,28 +1213,32 @@ dd {
   grid-template-columns: repeat(4, auto);
   justify-content: space-between;
   gap: 8px;
-  margin: 0 14px 12px;
+  margin: 0 18px 14px;
 }
 
 .stats dd {
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 17px;
+  font-weight: 600;
   white-space: nowrap;
 }
 
 .flight-more {
-  padding: 4px 14px 8px;
+  margin: 0 12px 12px;
+  padding: 16px;
+  border-radius: 24px;
+  background: var(--cell);
 }
 
 .flight-type {
-  margin-bottom: 12px;
-  font-weight: 700;
+  margin-bottom: 14px;
+  font-size: 17px;
+  font-weight: 600;
 }
 
 .info {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px 16px;
+  gap: 14px 16px;
 }
 
 .info .wide {
@@ -1091,20 +1246,32 @@ dd {
 }
 
 dd.danger {
-  color: var(--danger);
+  color: var(--red);
   font-weight: 700;
 }
 
 .flight-actions {
   display: flex;
   gap: 8px;
-  padding: 10px 14px 12px;
-  border-top: 1px solid var(--border);
+  padding: 4px 12px 8px;
+}
+
+/* On phones the map credits sit under the floating card and pages; hide them while those are
+   open so they don't show through the glass. */
+@media (max-width: 760px) {
+  body.panel-open .leaflet-bottom,
+  body:has(#sheet-backdrop:not([hidden])) .leaflet-bottom {
+    visibility: hidden;
+  }
 }
 
 /* ── Wide screens ────────────────────────────────────────── */
 
 @media (min-width: 761px) {
+  :root {
+    --radius-sheet: 30px;
+  }
+
   .top-ui {
     top: 12px;
     left: 12px;
@@ -1122,7 +1289,7 @@ dd.danger {
   .notes {
     flex: 1;
     align-items: center;
-    padding-top: 9px;
+    padding-top: 6px;
   }
 
   .leaflet-bottom {
@@ -1139,29 +1306,34 @@ dd.danger {
     z-index: 1260; /* above the (clear) backdrop, so another button switches pages directly */
   }
 
-  /* The zoom buttons get the same round glass look as the side buttons. */
-
-  .leaflet-right .leaflet-control {
-    margin-right: 14px;
+  /* The zoom buttons become a glass capsule matching the round buttons. */
+  .leaflet-right .leaflet-control-zoom {
+    margin: 0 14px 14px 0;
   }
 
   .leaflet-control-zoom.leaflet-bar {
     overflow: hidden;
-    border: 1px solid var(--fab-border);
+    border: 0;
     border-radius: calc(var(--fab) / 2);
-    box-shadow: var(--fab-shadow);
   }
 
   .leaflet-control-zoom.leaflet-bar a {
     width: var(--fab);
-    height: 42px;
-    line-height: 42px;
-    font-size: 20px;
-    font-weight: 400;
+    height: 44px;
+    border: 0;
+    background: transparent;
+    color: var(--label);
+    line-height: 44px;
+    font-size: 22px;
+    font-weight: 300;
   }
 
   .leaflet-control-zoom.leaflet-bar a:first-child {
-    border-bottom-color: var(--border);
+    box-shadow: inset 0 -0.5px 0 var(--separator);
+  }
+
+  .leaflet-control-zoom.leaflet-bar a:hover {
+    background: var(--fill-3);
   }
 
   .toast {
@@ -1172,7 +1344,7 @@ dd.danger {
     background: transparent;
   }
 
-  /* Pages pop out to the left of the side buttons. */
+  /* Pages pop out of the side buttons. */
   .sheet {
     top: calc(12px + var(--search-h) + 12px);
     left: auto;
@@ -1180,17 +1352,16 @@ dd.danger {
     bottom: auto;
     width: 380px;
     max-height: calc(100% - var(--search-h) - 48px);
-    padding-bottom: 18px;
-    border-radius: 18px;
-    border: 1px solid var(--border);
-    animation: fade-up 0.18s ease-out;
+    padding: 14px 16px 18px;
+    animation: pop-in 0.35s var(--ease-sheet);
+    transform-origin: top right;
   }
 
   .sheet .sheet-grip {
     display: none;
   }
 
-  /* The flight card becomes a side panel under the search bar, always fully open. */
+  /* The flight card becomes a floating side panel under the search bar, always fully open. */
   .flight {
     top: calc(12px + var(--search-h) + 12px);
     left: 12px;
@@ -1198,10 +1369,9 @@ dd.danger {
     bottom: 12px;
     width: var(--panel-w);
     max-height: none;
-    padding-bottom: 0;
-    border-radius: 18px;
-    border: 1px solid var(--border);
-    animation: fade-up 0.2s ease-out;
+    padding-bottom: 6px;
+    animation: pop-in 0.35s var(--ease-sheet);
+    transform-origin: top left;
   }
 
   .flight > .sheet-grip {
@@ -1209,7 +1379,7 @@ dd.danger {
   }
 
   .flight-head {
-    padding-top: 14px;
+    padding-top: 16px;
   }
 
   .flight .flight-body {
@@ -1226,20 +1396,24 @@ dd.danger {
   }
 }
 
-@keyframes fade-up {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
+@media (prefers-reduced-motion: reduce) {
+  .sheet,
+  .flight,
+  .backdrop,
+  .search-results {
+    animation: none;
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .sheet,
-  .flight {
-    animation: none;
+/* Without backdrop blur (rare), glass falls back to solid surfaces so text stays readable. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root {
+    --glass: rgba(30, 30, 32, 0.94);
+    --glass-thick: rgba(28, 28, 30, 0.97);
+  }
+
+  :root[data-theme='light'] {
+    --glass: rgba(255, 255, 255, 0.95);
+    --glass-thick: rgba(246, 246, 248, 0.98);
   }
 }
