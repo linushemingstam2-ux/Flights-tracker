@@ -34,6 +34,8 @@ export class Panel {
     $('p-close').addEventListener('click', onClose);
     $('p-follow').addEventListener('click', onFollow);
     $('p-zoom').addEventListener('click', onZoom);
+    // A photo that fails to load leaves no broken placeholder behind.
+    $('p-photo').addEventListener('error', () => ($('p-photo-wrap').hidden = true));
     this._bindGestures();
   }
 
