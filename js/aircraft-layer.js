@@ -15,7 +15,7 @@ import {
   EMERGENCY_FILL,
   GROUND_FILL,
   REALISTIC,
-} from './icons.js?v=10';
+} from './icons.js?v=11';
 import { destinationPoint, greatCirclePoints } from './shared/geo.js';
 import { isEmergency, shortAlt } from './format.js';
 

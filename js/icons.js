@@ -1,7 +1,7 @@
 // Aircraft symbols. Each model in aircraft-models.js is turned into true-to-scale top-view
 // geometry, then painted once per colour and size into a sprite: an outline for legibility,
 // shaded cylindrical fuselage, lit wings with control-surface lines, engines with intakes and
-// exhausts, cockpit glass, ambient occlusion where parts meet, and steady navigation lights.
+// exhausts, cockpit glass and ambient occlusion where parts meet.
 // Helicopter rotors are animated by the map layer.
 
 import { MODELS, modelIdFor } from './aircraft-models.js?v=9';
@@ -190,12 +190,6 @@ function buildAirframe(m) {
     g.deck = mirrorPoly(pts);
   }
   g.rotodome = m.rotodome ? { x: 0, y: m.rotodome.y, r: m.rotodome.d / 2 } : null;
-  g.lights = {
-    right: wr.tipPoint,
-    left: [-wr.tipPoint[0], wr.tipPoint[1]],
-    tail: [0, m.L - 0.1],
-    beacon: [0, m.wing.y + m.wing.cr * 0.45],
-  };
   return g;
 }
 
@@ -233,7 +227,6 @@ function buildFighter(m) {
   else g.fins.push(finAt(0));
   g.cockpit = { yf: L * 0.13, yr: L * 0.29, w: halfWidth(g.m, L * 0.22) * 0.72, canopy: true };
   g.nozzles = m.twin ? [[W * 0.24, L], [-W * 0.24, L]] : [[0, L]];
-  g.lights = { right: g.wing.tipPoint, left: [-g.wing.tipPoint[0], g.wing.tipPoint[1]], tail: [0, L], beacon: [0, L * 0.5] };
   return g;
 }
 
@@ -270,7 +263,6 @@ function buildHeli(m) {
   g.exhausts = [[hw * 0.4, Lf * 0.5], [-hw * 0.4, Lf * 0.5]];
   g.hubs = m.tandem ? [[0, Lf * 0.1], [0, Lf * 0.88]] : [[0, Lf * 0.35]];
   g.R = R;
-  g.lights = { tail: [0, Lf], beacon: [0, Lf * 0.62] };
   return g;
 }
 
@@ -366,8 +358,6 @@ function geometry(id) {
   if (g.rotodome) out.rotodome = { x: BOX / 2, y: T([0, g.rotodome.y])[1], r: g.rotodome.r * k };
   if (g.R) out.R = g.R * k;
   out.W = (g.m.W ?? g.m.Wc ?? 1) * k;
-  out.lights = {};
-  for (const [name, p] of Object.entries(g.lights || {})) out.lights[name] = T(p);
   GEOMETRY.set(id, out);
   return out;
 }
@@ -607,18 +597,6 @@ function strokeLine(ctx, pts, style, width) {
   ctx.stroke();
 }
 
-function lightDot(ctx, [x, y], color, u) {
-  const r = Math.max(1.1, u * 1.6);
-  const g = ctx.createRadialGradient(x, y, 0, x, y, r);
-  g.addColorStop(0, color);
-  g.addColorStop(0.35, color.replace(/[\d.]+\)$/, '0.55)'));
-  g.addColorStop(1, color.replace(/[\d.]+\)$/, '0)'));
-  ctx.fillStyle = g;
-  ctx.beginPath();
-  ctx.arc(x, y, r, 0, Math.PI * 2);
-  ctx.fill();
-}
-
 /** The cockpit visor or canopy, with a glint of reflected sky. */
 function drawGlass(ctx, c, u) {
   const { yf, yr, w } = c;
@@ -806,10 +784,8 @@ function paintAirframe(ctx, id, g, P, paint, u, blur) {
     ctx.fillRect(x - r, y - r * 0.12, r * 2, r * 0.24);
   }
 
-  // 9. Spinning propellers and navigation lights.
+  // 9. Spinning propellers.
   drawProps(ctx, g.props, u);
-  if (g.lights.left) lightDot(ctx, g.lights.left, 'rgba(255,48,48,1)', u);
-  if (g.lights.right) lightDot(ctx, g.lights.right, 'rgba(48,220,110,1)', u);
 }
 
 function paintHeli(ctx, g, P, paint, u, blur) {
