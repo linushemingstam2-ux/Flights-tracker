@@ -4,11 +4,8 @@ const KEY = 'tracker.settings.v1';
 
 export const DEFAULTS = Object.freeze({
   mapStyle: 'dark',
-  colorMode: 'classic',
   labels: true,
   allTrails: false,
-  metric: false,
-  source: 'auto',
   filters: Object.freeze({ hideGround: false, militaryOnly: false, altMin: 0, altMax: 60000, text: '' }),
 });
 
@@ -19,9 +16,11 @@ export function loadSettings() {
   } catch {
     // Storage unavailable (private mode, blocked cookies): fall back to defaults.
   }
+  // Only keep choices that still exist (older versions also saved units, colours and source).
+  const kept = Object.fromEntries(Object.keys(DEFAULTS).filter((k) => k in saved).map((k) => [k, saved[k]]));
   return {
     ...DEFAULTS,
-    ...saved,
+    ...kept,
     filters: { ...DEFAULTS.filters, ...(saved.filters || {}) },
   };
 }

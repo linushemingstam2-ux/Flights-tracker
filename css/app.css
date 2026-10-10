@@ -401,32 +401,7 @@ kbd {
   font-weight: 600;
 }
 
-/* ── Legend, tooltip, toast ──────────────────────────────── */
-
-.legend {
-  position: fixed;
-  left: 10px;
-  bottom: calc(var(--safe-bottom) + 26px);
-  z-index: 900;
-  width: 220px;
-  padding: 7px 10px 5px;
-  border-radius: 12px;
-  background: var(--glass);
-  border: 1px solid var(--border);
-}
-
-.legend-bar {
-  height: 6px;
-  border-radius: 3px;
-}
-
-.legend-labels {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 3px;
-  color: var(--muted);
-  font-size: 10px;
-}
+/* ── Tooltip, toast ──────────────────────────────────────── */
 
 .tooltip {
   position: fixed;
@@ -755,30 +730,6 @@ kbd {
   background: radial-gradient(circle at 75% 30%, #1d3b52 22%, transparent 23%),
     radial-gradient(circle at 20% 80%, #5a6b3a 30%, transparent 31%),
     linear-gradient(135deg, #3d5230, #6b6447 55%, #2f4426);
-}
-
-.segmented {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: 1fr;
-  gap: 4px;
-  padding: 4px;
-  border-radius: 12px;
-  background: var(--surface-2);
-}
-
-.segmented button {
-  height: 36px;
-  border: 0;
-  border-radius: 9px;
-  background: transparent;
-  color: var(--muted);
-  font-weight: 600;
-}
-
-.segmented button[aria-checked='true'] {
-  background: var(--surface-3);
-  color: var(--text);
 }
 
 .about {
@@ -1129,16 +1080,12 @@ dd.danger {
   border-top: 1px solid var(--border);
 }
 
-/* While a flight card is open on a phone, it takes the bottom of the screen: the side buttons
-   step aside and the legend hides. */
+/* While a flight card is open on a phone, it takes the bottom of the screen and the side
+   buttons step aside. */
 body.panel-open .fabs {
   opacity: 0;
   transform: translateX(12px);
   pointer-events: none;
-}
-
-body.panel-open .legend {
-  display: none;
 }
 
 /* ── Wide screens ────────────────────────────────────────── */
@@ -1202,11 +1149,6 @@ body.panel-open .legend {
     border-bottom-color: var(--border);
   }
 
-  .legend {
-    bottom: 16px;
-    left: 12px;
-  }
-
   .toast {
     bottom: 24px;
   }
@@ -1267,11 +1209,6 @@ body.panel-open .legend {
     opacity: 1;
     transform: none;
     pointer-events: auto;
-  }
-
-  body.panel-open .legend {
-    display: block;
-    left: calc(var(--panel-w) + 24px);
   }
 
   body.panel-open .notes {

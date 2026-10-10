@@ -1,12 +1,12 @@
 // Flight radar app: map, live polling, selection, search, filters and settings.
 
 import { AircraftStore } from './store.js';
-import { AircraftLayer } from './aircraft-layer.js?v=12';
-import { Panel } from './panel.js?v=12';
+import { AircraftLayer } from './aircraft-layer.js?v=13';
+import { Panel } from './panel.js?v=13';
 import { createDataSource } from './datasource.js?v=7';
 import { SimSource } from './sim.js';
 import { loadSettings, saveSettings, makeFilter, DEFAULTS } from './settings.js';
-import { svgIcon, shapeFor, altitudeHue, CLASSIC_FILL } from './icons.js?v=12';
+import { svgIcon, shapeFor, CLASSIC_FILL } from './icons.js?v=13';
 import { formatAlt, formatSpeed, shortAlt, formatAgo } from './format.js';
 import { distanceNm, normalizeLon } from './shared/geo.js';
 import { PROVIDERS } from './shared/providers.js';
@@ -42,14 +42,13 @@ const MAP_STYLES = {
 
 const DEFAULT_VIEW = { lat: 51.47, lon: -0.45, zoom: 8 }; // London
 const FAILURES_BEFORE_BANNER = 3;
+const DATA_SOURCE = 'auto'; // the best available network, switching automatically if one fails
 
 // ── State ────────────────────────────────────────────────────────────────
 
 const settings = loadSettings();
 // Older saved choices: "osm" is now the light style.
 if (!Object.hasOwn(MAP_STYLES, settings.mapStyle)) settings.mapStyle = settings.mapStyle === 'osm' ? 'light' : 'dark';
-// A saved data source that no longer exists (e.g. airplanes.live) falls back to automatic.
-if (settings.source !== 'auto' && !Object.hasOwn(PROVIDERS, settings.source)) settings.source = 'auto';
 const urlDemo = new URLSearchParams(location.search).get('demo') === '1';
 const store = new AircraftStore();
 let filter = makeFilter(settings.filters);
@@ -101,10 +100,8 @@ function applyMapStyle(nextServer = false) {
 applyMapStyle();
 
 const layer = new AircraftLayer(store, () => ({
-  colorMode: settings.colorMode,
   labels: settings.labels,
   allTrails: settings.allTrails,
-  metric: settings.metric,
   filter,
   route,
   coverage,
@@ -167,7 +164,7 @@ async function refresh() {
   const src = source;
   const q = viewQuery();
   try {
-    const res = await src.area(q.lat, q.lon, q.radius, settings.source);
+    const res = await src.area(q.lat, q.lon, q.radius, DATA_SOURCE);
     if (src !== source) return;
     const seen = store.ingest(res.aircraft, {
       t: Date.now(),
@@ -179,7 +176,7 @@ async function refresh() {
     // Keep tracking the selected aircraft even when it is outside the loaded area.
     const sel = store.selectedHex;
     if (sel && !seen.has(sel) && !sel.startsWith('~')) {
-      const found = await src.find('hex', sel, settings.source).catch(() => null);
+      const found = await src.find('hex', sel, DATA_SOURCE).catch(() => null);
       if (found && src === source) store.ingest(found.aircraft, { t: Date.now(), age: found.age || 0 });
     }
   } catch (err) {
@@ -189,7 +186,7 @@ async function refresh() {
   } finally {
     if (src === source) {
       inflight = false;
-      const delay = pending ? 0 : source.pollMs(status.sourceId || settings.source);
+      const delay = pending ? 0 : source.pollMs(status.sourceId || DATA_SOURCE);
       pending = false;
       pollTimer = setTimeout(refresh, delay);
     }
@@ -212,7 +209,6 @@ function useSource(next) {
   coverage = null;
   Object.assign(status, { lastUpdate: 0, sourceName: '', sourceId: '', error: null, failures: 0 });
   $('demo-badge').hidden = source.mode !== 'demo';
-  $('s-demo').checked = source.mode === 'demo';
   renderStatus();
   refresh();
 }
@@ -308,7 +304,7 @@ function tickPanel() {
     return;
   }
   if (ac.callsign && ac.callsign !== enrichedCallsign) loadRoute(ac);
-  panel.update(ac, store.positionAt(ac, Date.now()), { metric: settings.metric, now: Date.now() });
+  panel.update(ac, store.positionAt(ac, Date.now()), { now: Date.now() });
 }
 setInterval(tickPanel, 500);
 
@@ -347,7 +343,7 @@ map.on('mousemove', (e) => {
   }
   $('tt-callsign').textContent = ac.callsign || ac.reg || ac.hex.toUpperCase();
   $('tt-type').textContent = [ac.type, ac.reg].filter(Boolean).join(' · ') || 'Unknown type';
-  $('tt-alt').textContent = `${formatAlt(ac, settings.metric)} · ${formatSpeed(ac.gs, settings.metric)}`;
+  $('tt-alt').textContent = `${formatAlt(ac)} · ${formatSpeed(ac.gs)}`;
   tip.hidden = false;
   const { clientX: x, clientY: y } = e.originalEvent;
   const w = tip.offsetWidth;
@@ -411,8 +407,7 @@ function renderStatus() {
   const notice = $('notice');
   notice.hidden = !coverage;
   if (coverage) {
-    const r = settings.metric ? `${Math.round(coverage.radius * 1.852)} km` : `${coverage.radius} nm`;
-    notice.textContent = `Showing traffic within ${r} of the map centre · zoom in to see everything`;
+    notice.textContent = `Showing traffic within ${coverage.radius} nm of the map centre · zoom in to see everything`;
   }
 }
 setInterval(renderStatus, 1000);
@@ -462,7 +457,7 @@ function renderResults() {
     main.append(title, sub);
     const alt = document.createElement('span');
     alt.className = 'sr-alt';
-    alt.textContent = shortAlt(ac, settings.metric);
+    alt.textContent = shortAlt(ac);
     li.append(icon, main, alt);
     li.addEventListener('mousedown', (e) => {
       e.preventDefault();
@@ -487,7 +482,7 @@ async function searchWorldwide(q) {
   toast(`Searching for “${v}”…`);
   for (const kind of kinds) {
     try {
-      const res = await source.find(kind, kind === 'hex' ? v.toLowerCase() : v.toUpperCase(), settings.source);
+      const res = await source.find(kind, kind === 'hex' ? v.toLowerCase() : v.toUpperCase(), DATA_SOURCE);
       if (res.aircraft?.length) {
         store.ingest(res.aircraft, { t: Date.now(), age: res.age || 0 });
         toast(null);
@@ -589,7 +584,7 @@ function bindFilters() {
     max.value = f.altMax;
     ground.checked = f.hideGround;
     mil.checked = f.militaryOnly;
-    const fmt = (v) => (settings.metric ? `${nf.format(Math.round(v * 0.3048))} m` : `${nf.format(v)} ft`);
+    const fmt = (v) => `${nf.format(v)} ft`;
     const anyAlt = f.altMin === 0 && f.altMax === DEFAULTS.filters.altMax;
     $('f-alt-out').textContent = anyAlt ? 'any' : `${fmt(f.altMin)} – ${f.altMax === DEFAULTS.filters.altMax ? 'max' : fmt(f.altMax)}`;
     const active = Boolean(f.text.trim()) || !anyAlt || f.hideGround || f.militaryOnly;
@@ -627,34 +622,19 @@ function bindFilters() {
     apply();
   });
   sync();
-  return sync;
 }
-const syncFilters = bindFilters();
+bindFilters();
 
 function bindSettings() {
-  const src = $('s-source');
   const labels = $('s-labels');
   const trails = $('s-trails');
-  const metric = $('s-metric');
-  src.value = settings.source;
   labels.checked = settings.labels;
   trails.checked = settings.allTrails;
-  metric.checked = settings.metric;
 
   bindChoice($('s-map'), settings.mapStyle, (v) => {
     settings.mapStyle = v;
     applyMapStyle();
     persist();
-  });
-  bindChoice($('s-color'), settings.colorMode, (v) => {
-    settings.colorMode = v;
-    renderLegend();
-    persist();
-  });
-  src.addEventListener('change', () => {
-    settings.source = src.value;
-    persist();
-    if (source?.mode !== 'demo') refresh();
   });
   labels.addEventListener('change', () => {
     settings.labels = labels.checked;
@@ -664,25 +644,8 @@ function bindSettings() {
     settings.allTrails = trails.checked;
     persist();
   });
-  metric.addEventListener('change', () => {
-    settings.metric = metric.checked;
-    syncFilters();
-    renderStatus();
-    persist();
-  });
-  $('s-demo').addEventListener('change', (e) => setDemo(e.target.checked));
 }
 bindSettings();
-
-function renderLegend() {
-  $('legend').hidden = settings.colorMode !== 'altitude';
-  const stops = [];
-  for (let alt = 0; alt <= 40000; alt += 2000) {
-    stops.push(`hsl(${Math.round(altitudeHue(alt))} 85% 55%) ${(alt / 40000) * 100}%`);
-  }
-  document.querySelector('.legend-bar').style.background = `linear-gradient(to right, ${stops.join(', ')})`;
-}
-renderLegend();
 
 // ── Misc controls ────────────────────────────────────────────────────────
 
@@ -764,7 +727,7 @@ async function selectFromLink(hex) {
   for (let attempt = 0; attempt < 10; attempt++) {
     if (store.get(hex)) return select(hex);
     if (attempt === 3 && !hex.startsWith('~')) {
-      const res = await source.find('hex', hex, settings.source).catch(() => null);
+      const res = await source.find('hex', hex, DATA_SOURCE).catch(() => null);
       if (res?.aircraft?.length) {
         store.ingest(res.aircraft, { t: Date.now(), age: res.age || 0 });
         return select(hex, { fly: true });

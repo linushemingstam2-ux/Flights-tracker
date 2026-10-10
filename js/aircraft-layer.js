@@ -14,8 +14,7 @@ import {
   SELECTED_FILL,
   EMERGENCY_FILL,
   GROUND_FILL,
-  REALISTIC,
-} from './icons.js?v=12';
+} from './icons.js?v=13';
 import { destinationPoint, greatCirclePoints } from './shared/geo.js';
 import { isEmergency, shortAlt } from './format.js';
 
@@ -24,7 +23,7 @@ const L = window.L;
 export const AircraftLayer = L.Layer.extend({
   initialize(store, getOptions) {
     this.store = store;
-    this.getOptions = getOptions; // () => { colorMode, labels, allTrails, metric, filter, route, coverage }
+    this.getOptions = getOptions; // () => { labels, allTrails, filter, route, coverage }
     this._hits = [];
     this._frame = this._frame.bind(this);
     this.visibleCount = 0;
@@ -154,18 +153,16 @@ export const AircraftLayer = L.Layer.extend({
     // Shadows first, so they always fall on the ground and never across another aircraft.
     for (const hit of hits) this._drawShadow(ctx, hit, iconPx, dpr, hit.ac === selected);
     for (const hit of hits) {
-      if (hit.ac !== selected) this._drawPlane(ctx, hit, o, iconPx, dpr, t, false);
+      if (hit.ac !== selected) this._drawPlane(ctx, hit, iconPx, dpr, t, false);
     }
-    if (selHit) this._drawPlane(ctx, selHit, o, iconPx, dpr, t, true);
+    if (selHit) this._drawPlane(ctx, selHit, iconPx, dpr, t, true);
     this._drawLife(ctx, hits, selected, iconPx, dpr, t);
 
     if (o.labels && (zoom >= 7 || hits.length < 250)) this._drawLabels(ctx, hits, selected, o, zoom, iconPx);
   },
 
-  _color(ac, mode, isSelected) {
+  _color(ac, isSelected) {
     if (isEmergency(ac)) return EMERGENCY_FILL;
-    if (mode === 'realistic') return REALISTIC;
-    if (mode === 'altitude') return altitudeColor(ac.alt, ac.onGround);
     if (isSelected) return SELECTED_FILL;
     return ac.onGround ? GROUND_FILL : CLASSIC_FILL;
   },
@@ -220,10 +217,10 @@ export const AircraftLayer = L.Layer.extend({
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   },
 
-  _drawPlane(ctx, hit, o, iconPx, dpr, t, isSelected) {
+  _drawPlane(ctx, hit, iconPx, dpr, t, isSelected) {
     const { ac, x, y } = hit;
     const px = this._size(ac, iconPx, isSelected);
-    const img = sprite(ac._shape, this._color(ac, o.colorMode, isSelected), px, dpr);
+    const img = sprite(ac._shape, this._color(ac, isSelected), px, dpr);
 
     if (isEmergency(ac)) {
       const pulse = (Math.sin(t / 220) + 1) / 2;
@@ -362,7 +359,7 @@ export const AircraftLayer = L.Layer.extend({
         ac._label = text;
         ac._labelW = ctx.measureText(text).width;
       }
-      const sub = detailed ? [shortAlt(ac, o.metric), ac.type].filter(Boolean).join(' · ') : '';
+      const sub = detailed ? [shortAlt(ac), ac.type].filter(Boolean).join(' · ') : '';
       ctx.font = '500 10px system-ui, sans-serif';
       const subW = sub ? ctx.measureText(sub).width : 0;
       // A small dark tag to the lower right of the aircraft, like the big flight radars.
