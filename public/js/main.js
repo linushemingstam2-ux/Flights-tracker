@@ -1,7 +1,7 @@
 // Flight radar app: map, live polling, selection, search, filters and settings.
 
 import { AircraftStore } from './store.js';
-import { AircraftLayer } from './aircraft-layer.js?v=15';
+import { AircraftLayer } from './aircraft-layer.js?v=16';
 import { Panel } from './panel.js?v=13';
 import { createDataSource } from './datasource.js?v=8';
 import { SimSource } from './sim.js';
@@ -610,6 +610,28 @@ function bindSettings() {
   });
 }
 bindSettings();
+
+// ── Liquid Glass touch ───────────────────────────────────────────────────
+// Pressed glass lights up under the finger and swells, then springs back (see .pressed in CSS).
+
+const PRESSABLE = '.fab, .btn, .btn-secondary, .icon-btn';
+let pressedEl = null;
+
+document.addEventListener('pointerdown', (e) => {
+  const el = e.target.closest?.(PRESSABLE);
+  if (!el) return;
+  const r = el.getBoundingClientRect();
+  el.style.setProperty('--px', `${((e.clientX - r.left) / r.width) * 100}%`);
+  el.style.setProperty('--py', `${((e.clientY - r.top) / r.height) * 100}%`);
+  el.classList.add('pressed');
+  pressedEl = el;
+});
+for (const type of ['pointerup', 'pointercancel']) {
+  document.addEventListener(type, () => {
+    pressedEl?.classList.remove('pressed');
+    pressedEl = null;
+  });
+}
 
 // ── Misc controls ────────────────────────────────────────────────────────
 

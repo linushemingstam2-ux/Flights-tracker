@@ -23,7 +23,7 @@ export function formatSpeed(kt) {
 export function formatVRate(fpm) {
   if (fpm == null) return '—';
   const arrow = fpm > 250 ? '↑ ' : fpm < -250 ? '↓ ' : '';
-  return `${arrow}${nf0.format(fpm)} ft/min`;
+  return `${arrow}${nf0.format(arrow ? Math.abs(fpm) : fpm)} ft/min`;
 }
 
 export function formatTrack(deg) {

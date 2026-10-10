@@ -20,27 +20,28 @@
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="favicon.svg" />
     <link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
-    <link rel="stylesheet" href="css/app.css?v=16" />
+    <link rel="stylesheet" href="css/app.css?v=19" />
   </head>
   <body>
     <main id="map" aria-label="Map of live air traffic"></main>
 
     <!-- Top: search and notices float over the map -->
     <div class="top-ui">
-      <div class="search" role="search">
+      <div class="search glass" role="search">
+        <svg class="search-glyph" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.25"/><path d="m15.2 15.2 4.8 4.8"/></svg>
+        <input id="search" type="search" placeholder="Search flights" autocomplete="off" spellcheck="false" enterkeyhint="search" aria-label="Search flights" aria-controls="search-results" aria-autocomplete="list" />
         <a class="brand" href="./" aria-label="Tracker – live flight radar">
           <svg viewBox="0 0 32 32" aria-hidden="true"><path fill="currentColor" d="M16 1C17 1 17.6 2.4 17.6 4L17.6 11 30 18.5 30 20.5 17.6 16.5 17.4 25 21.5 28.2 21.5 29.8 16.6 28.6 16 30.5 15.4 28.6 10.5 29.8 10.5 28.2 14.6 25 14.4 16.5 2 20.5 2 18.5 14.4 11 14.4 4C14.4 2.4 15 1 16 1Z" transform="rotate(45 16 16)"/></svg>
         </a>
-        <input id="search" type="search" placeholder="Search flights" autocomplete="off" spellcheck="false" enterkeyhint="search" aria-label="Search flights" aria-controls="search-results" aria-autocomplete="list" />
         <ul id="search-results" class="search-results" role="listbox" hidden></ul>
       </div>
 
       <div class="notes">
-      <div id="demo-badge" class="demo-badge" hidden>
+      <div id="demo-badge" class="demo-badge glass" hidden>
         <strong>DEMO</strong> Simulated traffic, not real flights
         <button id="demo-exit" type="button">Go live</button>
       </div>
-      <div id="banner" class="banner" role="alert" hidden>
+      <div id="banner" class="banner glass" role="alert" hidden>
         <span id="banner-text">Live flight data is unavailable right now.</span>
         <small id="banner-detail" class="banner-detail"></small>
         <span class="banner-actions">
@@ -48,30 +49,30 @@
           <button id="banner-demo" type="button">Show demo traffic</button>
         </span>
       </div>
-      <div id="notice" class="notice" hidden></div>
+      <div id="notice" class="notice glass" hidden></div>
       </div>
     </div>
 
-    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+    <div id="toast" class="toast glass" role="status" aria-live="polite" hidden></div>
 
     <!-- Round buttons on the side: each opens its page; the last one finds you on the map -->
     <nav class="fabs" aria-label="Map tools">
-      <button id="btn-settings" class="fab" type="button" data-sheet="settings" aria-expanded="false" aria-controls="settings" aria-label="Settings" title="Settings">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.53 4.75L10.76 2.48L13.24 2.48L13.47 4.75L16.09 5.83L17.85 4.39L19.61 6.15L18.17 7.91L19.25 10.53L21.52 10.76L21.52 13.24L19.25 13.47L18.17 16.09L19.61 17.85L17.85 19.61L16.09 18.17L13.47 19.25L13.24 21.52L10.76 21.52L10.53 19.25L7.91 18.17L6.15 19.61L4.39 17.85L5.83 16.09L4.75 13.47L2.48 13.24L2.48 10.76L4.75 10.53L5.83 7.91L4.39 6.15L6.15 4.39L7.91 5.83Z"/><circle cx="12" cy="12" r="3.1"/></svg>
+      <button id="btn-settings" class="fab glass" type="button" data-sheet="settings" aria-expanded="false" aria-controls="settings" aria-label="Settings" title="Settings">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="6.4"/><circle class="teeth" cx="12" cy="12" r="8.75"/><circle cx="12" cy="12" r="2.5"/></svg>
       </button>
-      <button id="btn-filters" class="fab" type="button" data-sheet="filters" aria-expanded="false" aria-controls="filters" aria-label="Filters" title="Filters">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2.25"/><circle cx="9" cy="17" r="2.25"/></svg>
+      <button id="btn-filters" class="fab glass" type="button" data-sheet="filters" aria-expanded="false" aria-controls="filters" aria-label="Filters" title="Filters">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 7h15M7.5 12h9M10.5 17h3"/></svg>
         <i id="filter-badge" class="badge" hidden></i>
       </button>
-      <button id="btn-locate" class="fab fab-locate" type="button" aria-label="Show my location" title="My location">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.5 4.5 4 11.2l6.6 2.2 2.2 6.6 6.7-15.5Z"/></svg>
+      <button id="btn-locate" class="fab glass fab-locate" type="button" aria-label="Show my location" title="My location">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.6 4.4 4.2 10.9c-.7.3-.6 1.3.1 1.5l6.2 1.8 1.8 6.2c.2.7 1.2.8 1.5.1Z"/></svg>
       </button>
     </nav>
 
     <!-- Pages (settings, filters): slide up on phones, pop out beside the buttons on wide screens -->
     <div id="sheet-backdrop" class="backdrop" hidden></div>
 
-    <section id="filters" class="sheet" hidden aria-label="Filters">
+    <section id="filters" class="sheet glass" hidden aria-label="Filters">
       <div class="sheet-grip" aria-hidden="true"><span></span></div>
       <header class="sheet-head">
         <h2>Filters</h2>
@@ -79,21 +80,28 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg>
         </button>
       </header>
-      <label class="field">
-        <span>Callsign, airline, type or registration</span>
-        <input id="f-text" type="text" placeholder="e.g. BAW, A38*, B77W" autocomplete="off" spellcheck="false" />
-      </label>
-      <div class="field">
-        <span>Altitude: <output id="f-alt-out">any</output></span>
-        <label class="range"><span>Min</span><input id="f-alt-min" type="range" min="0" max="60000" step="1000" /></label>
-        <label class="range"><span>Max</span><input id="f-alt-max" type="range" min="0" max="60000" step="1000" /></label>
+      <div class="sheet-body">
+        <label class="field">
+          <span>Callsign, airline, type or registration</span>
+          <input id="f-text" type="text" placeholder="e.g. BAW, A38*, B77W" autocomplete="off" spellcheck="false" />
+        </label>
+        <div class="field">
+          <span>Altitude: <output id="f-alt-out">any</output></span>
+          <label class="range"><span>Min</span><input id="f-alt-min" type="range" min="0" max="60000" step="1000" /></label>
+          <label class="range"><span>Max</span><input id="f-alt-max" type="range" min="0" max="60000" step="1000" /></label>
+        </div>
+        <div class="field">
+          <span>Aircraft</span>
+          <div class="group">
+            <label class="toggle"><span>Hide aircraft on the ground</span><input id="f-ground" type="checkbox" /></label>
+            <label class="toggle"><span>Military aircraft only</span><input id="f-military" type="checkbox" /></label>
+          </div>
+        </div>
+        <button id="f-reset" class="btn-secondary wide" type="button">Reset filters</button>
       </div>
-      <label class="toggle"><span>Hide aircraft on the ground</span><input id="f-ground" type="checkbox" /></label>
-      <label class="toggle"><span>Military aircraft only</span><input id="f-military" type="checkbox" /></label>
-      <button id="f-reset" class="btn-secondary wide" type="button">Reset filters</button>
     </section>
 
-    <section id="settings" class="sheet" hidden aria-label="Settings">
+    <section id="settings" class="sheet glass" hidden aria-label="Settings">
       <div class="sheet-grip" aria-hidden="true"><span></span></div>
       <header class="sheet-head">
         <h2>Settings</h2>
@@ -101,26 +109,36 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg>
         </button>
       </header>
-      <div id="s-map" class="style-cards" role="radiogroup" aria-label="Appearance">
-        <button type="button" role="radio" data-value="dark" aria-checked="false"><i class="swatch swatch-dark"></i>Dark mode</button>
-        <button type="button" role="radio" data-value="light" aria-checked="false"><i class="swatch swatch-light"></i>Light mode</button>
-        <button type="button" role="radio" data-value="satellite" aria-checked="false"><i class="swatch swatch-satellite"></i>Satellite</button>
+      <div class="sheet-body">
+        <div class="field">
+          <span>Appearance</span>
+          <div id="s-map" class="style-cards" role="radiogroup" aria-label="Appearance">
+            <button type="button" role="radio" data-value="dark" aria-checked="false"><i class="swatch swatch-dark"></i>Dark mode</button>
+            <button type="button" role="radio" data-value="light" aria-checked="false"><i class="swatch swatch-light"></i>Light mode</button>
+            <button type="button" role="radio" data-value="satellite" aria-checked="false"><i class="swatch swatch-satellite"></i>Satellite</button>
+          </div>
+        </div>
+        <div class="field">
+          <span>Map</span>
+          <div class="group">
+            <label class="toggle"><span>Trails for all aircraft</span><input id="s-trails" type="checkbox" /></label>
+          </div>
+        </div>
+        <p class="about">
+          Live positions come from community ADS-B networks
+          (<a href="https://adsb.lol" target="_blank" rel="noopener">adsb.lol</a>,
+          <a href="https://adsb.fi" target="_blank" rel="noopener">adsb.fi</a>,
+          <a href="https://opensky-network.org" target="_blank" rel="noopener">OpenSky</a>).
+          Routes from <a href="https://www.adsbdb.com" target="_blank" rel="noopener">adsbdb</a>, photos from
+          <a href="https://www.planespotters.net" target="_blank" rel="noopener">planespotters.net</a>.
+          Not for navigation.
+        </p>
+        <p class="about keys">Keys: <kbd>/</kbd> search · <kbd>F</kbd> follow · <kbd>Esc</kbd> close</p>
       </div>
-      <label class="toggle"><span>Trails for all aircraft</span><input id="s-trails" type="checkbox" /></label>
-      <p class="about">
-        Live positions come from community ADS-B networks
-        (<a href="https://adsb.lol" target="_blank" rel="noopener">adsb.lol</a>,
-        <a href="https://adsb.fi" target="_blank" rel="noopener">adsb.fi</a>,
-        <a href="https://opensky-network.org" target="_blank" rel="noopener">OpenSky</a>).
-        Routes from <a href="https://www.adsbdb.com" target="_blank" rel="noopener">adsbdb</a>, photos from
-        <a href="https://www.planespotters.net" target="_blank" rel="noopener">planespotters.net</a>.
-        Not for navigation.
-      </p>
-      <p class="about keys">Keys: <kbd>/</kbd> search · <kbd>F</kbd> follow · <kbd>Esc</kbd> close</p>
     </section>
 
     <!-- Selected flight: bottom card on phones (swipe up for more), side panel on wider screens -->
-    <aside id="panel" class="flight" hidden aria-label="Flight details">
+    <aside id="panel" class="flight glass" hidden aria-label="Flight details">
       <button id="p-handle" class="sheet-grip" type="button" aria-label="Show more details" aria-expanded="false"><span></span></button>
       <div class="flight-head">
         <div id="p-icon" class="flight-icon"></div>
@@ -134,11 +152,28 @@
         </button>
       </div>
 
+      <div class="flight-actions">
+        <button id="p-follow" class="btn" type="button" aria-pressed="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="6.5"/><circle class="dot" cx="12" cy="12" r="2"/><path d="M12 2.8v3M12 18.2v3M2.8 12h3M18.2 12h3"/></svg>
+          <span>Follow</span>
+        </button>
+        <button id="p-zoom" class="btn-secondary" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.25"/><path d="m15.2 15.2 4.8 4.8M10.5 8v5M8 10.5h5"/></svg>
+          <span>Zoom to</span>
+        </button>
+        <a id="p-external" class="btn-secondary" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.2 13.5A8 8 0 1 0 6 6.6"/><path d="M5.6 3.4v3.6h3.6"/><path d="M12 8v4.3l2.8 1.8"/></svg>
+          <span>History</span>
+        </a>
+      </div>
+
       <div class="flight-body">
-        <figure id="p-photo-wrap" class="photo" hidden>
-          <img id="p-photo" alt="" referrerpolicy="no-referrer" />
-          <figcaption id="p-photo-credit"></figcaption>
-        </figure>
+        <dl class="stats">
+          <div><dt>Altitude</dt><dd id="p-alt">—</dd></div>
+          <div><dt>Speed</dt><dd id="p-speed">—</dd></div>
+          <div><dt>Vertical</dt><dd id="p-vrate">—</dd></div>
+          <div><dt>Track</dt><dd id="p-track">—</dd></div>
+        </dl>
 
         <section id="p-route" class="route" hidden>
           <div class="route-ends">
@@ -160,12 +195,10 @@
           <p id="p-route-warning" class="route-warning" hidden>Route data may be out of date for this flight.</p>
         </section>
 
-        <dl class="stats">
-          <div><dt>Altitude</dt><dd id="p-alt">—</dd></div>
-          <div><dt>Speed</dt><dd id="p-speed">—</dd></div>
-          <div><dt>Vertical</dt><dd id="p-vrate">—</dd></div>
-          <div><dt>Track</dt><dd id="p-track">—</dd></div>
-        </dl>
+        <figure id="p-photo-wrap" class="photo" hidden>
+          <img id="p-photo" alt="" referrerpolicy="no-referrer" />
+          <figcaption id="p-photo-credit"></figcaption>
+        </figure>
 
         <div class="flight-more">
           <div id="p-type" class="flight-type"></div>
@@ -183,14 +216,9 @@
         </div>
       </div>
 
-      <div class="flight-actions">
-        <button id="p-follow" class="btn" type="button" aria-pressed="false">Follow</button>
-        <button id="p-zoom" class="btn-secondary" type="button">Zoom to</button>
-        <a id="p-external" class="btn-secondary" target="_blank" rel="noopener">History ↗</a>
-      </div>
     </aside>
 
     <script src="vendor/leaflet/leaflet.js"></script>
-    <script type="module" src="js/main.js?v=18"></script>
+    <script type="module" src="js/main.js?v=20"></script>
   </body>
 </html>
