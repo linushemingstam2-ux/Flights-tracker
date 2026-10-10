@@ -14,18 +14,18 @@
     <script>
       // Light mode is applied before the first paint, so it never flashes dark on load.
       try {
-        if (JSON.parse(localStorage.getItem('tracker.settings.v1'))?.mapStyle === 'light') document.documentElement.dataset.theme = 'light';
+        if (/^(light|satellite)$/.test(JSON.parse(localStorage.getItem('tracker.settings.v1'))?.mapStyle)) document.documentElement.dataset.theme = 'light';
       } catch {}
     </script>
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="favicon.svg" />
     <link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
-    <link rel="stylesheet" href="css/app.css?v=14" />
+    <link rel="stylesheet" href="css/app.css?v=15" />
   </head>
   <body>
     <main id="map" aria-label="Map of live air traffic"></main>
 
-    <!-- Top: search, status and notices float over the map -->
+    <!-- Top: search and notices float over the map -->
     <div class="top-ui">
       <div class="search" role="search">
         <a class="brand" href="./" aria-label="Tracker – live flight radar">
@@ -37,12 +37,6 @@
       </div>
 
       <div class="notes">
-      <div id="status" class="status" aria-live="polite">
-        <span id="status-dot" class="dot"></span>
-        <span id="status-text">Connecting…</span>
-        <span id="status-source" class="status-source"></span>
-      </div>
-
       <div id="demo-badge" class="demo-badge" hidden>
         <strong>DEMO</strong> Simulated traffic, not real flights
         <button id="demo-exit" type="button">Go live</button>
@@ -59,11 +53,6 @@
       </div>
     </div>
 
-    <div id="tooltip" class="tooltip" hidden>
-      <strong id="tt-callsign"></strong>
-      <span id="tt-type"></span>
-      <span id="tt-alt"></span>
-    </div>
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
     <!-- Round buttons on the side: each opens its page; the last one finds you on the map -->
@@ -118,7 +107,6 @@
         <button type="button" role="radio" data-value="light" aria-checked="false"><i class="swatch swatch-light"></i>Light mode</button>
         <button type="button" role="radio" data-value="satellite" aria-checked="false"><i class="swatch swatch-satellite"></i>Satellite</button>
       </div>
-      <label class="toggle"><span>Callsign labels</span><input id="s-labels" type="checkbox" /></label>
       <label class="toggle"><span>Trails for all aircraft</span><input id="s-trails" type="checkbox" /></label>
       <p class="about">
         Live positions come from community ADS-B networks
@@ -204,6 +192,6 @@
     </aside>
 
     <script src="vendor/leaflet/leaflet.js"></script>
-    <script type="module" src="js/main.js?v=16"></script>
+    <script type="module" src="js/main.js?v=17"></script>
   </body>
 </html>

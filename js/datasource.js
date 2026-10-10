@@ -86,11 +86,8 @@ function describe(err) {
   return err?.message || 'failed';
 }
 
-/**
- * fetchJson() that falls back to relays when the browser can't read a provider directly.
- * `note` receives short progress messages for the status bar.
- */
-async function getJsonAnyRoute(url, note = () => {}) {
+/** fetchJson() that falls back to relays when the browser can't read a provider directly. */
+async function getJsonAnyRoute(url) {
   const host = new URL(url).host;
   const known = workingRoute.get(host);
   if (known) {
@@ -111,7 +108,6 @@ async function getJsonAnyRoute(url, note = () => {}) {
       if (err instanceof HttpError) throw err;
     }
   }
-  note('via relay');
   const attempts = RELAYS.map((relay) =>
     fetchJson(relay.wrap(url), { timeoutMs: 10000 }).then(
       (json) => ({ relay, json }),
@@ -131,7 +127,6 @@ async function getJsonAnyRoute(url, note = () => {}) {
 class DirectSource {
   mode = 'direct';
   cooldown = new Map();
-  progress = ''; // what is being tried right now, for the status bar
 
   pollMs(source) {
     return pollMsFor(source);
@@ -145,9 +140,8 @@ class DirectSource {
     if (ready.length) list = ready;
     const errors = [];
     for (const p of list) {
-      this.progress = p.name;
       try {
-        const res = await run(p, (msg) => (this.progress = `${p.name} ${msg}`));
+        const res = await run(p);
         this.cooldown.delete(p.id);
         return { source: p.id, sourceName: p.name, age: 0, ...res };
       } catch (err) {
@@ -160,9 +154,9 @@ class DirectSource {
   }
 
   area(lat, lon, r, source) {
-    return this._withFallback(source, () => true, async (p, note) => {
+    return this._withFallback(source, () => true, async (p) => {
       const radius = effectiveRadius(p, r);
-      const aircraft = p.parse(await getJsonAnyRoute(p.areaUrl(lat, lon, radius), note));
+      const aircraft = p.parse(await getJsonAnyRoute(p.areaUrl(lat, lon, radius)));
       return { aircraft, radius, capped: radius < r };
     });
   }

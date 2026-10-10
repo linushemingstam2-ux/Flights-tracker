@@ -1,13 +1,13 @@
 // Flight radar app: map, live polling, selection, search, filters and settings.
 
 import { AircraftStore } from './store.js';
-import { AircraftLayer } from './aircraft-layer.js?v=14';
+import { AircraftLayer } from './aircraft-layer.js?v=15';
 import { Panel } from './panel.js?v=13';
-import { createDataSource } from './datasource.js?v=7';
+import { createDataSource } from './datasource.js?v=8';
 import { SimSource } from './sim.js';
 import { loadSettings, saveSettings, makeFilter, DEFAULTS } from './settings.js';
 import { svgIcon, shapeFor, CLASSIC_FILL } from './icons.js?v=13';
-import { formatAlt, formatSpeed, shortAlt, formatAgo } from './format.js';
+import { shortAlt } from './format.js';
 import { distanceNm, normalizeLon } from './shared/geo.js';
 import { PROVIDERS } from './shared/providers.js';
 
@@ -26,12 +26,14 @@ const STREET_TILES = [
     subdomains: 'abc',
   },
 ];
-// Each style also sets the app's appearance: dark mode, light mode, or satellite (dark UI).
+// Each style also sets the app's appearance (`theme`) and the colour of the route and selection
+// marks drawn over the map (`ink`): satellite imagery is dark, but its menus are white.
 const MAP_STYLES = {
-  dark: { tiles: STREET_TILES, dark: true, theme: 'dark' }, // street map, darkened with a CSS filter
-  light: { tiles: STREET_TILES, theme: 'light' },
+  dark: { tiles: STREET_TILES, dark: true, theme: 'dark', ink: 'dark' }, // street map, darkened with a CSS filter
+  light: { tiles: STREET_TILES, theme: 'light', ink: 'light' },
   satellite: {
-    theme: 'dark',
+    theme: 'light',
+    ink: 'dark',
     tiles: [
       {
         url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
@@ -109,8 +111,7 @@ function applyMapStyle(nextServer = false) {
 applyMapStyle();
 
 const layer = new AircraftLayer(store, () => ({
-  theme: MAP_STYLES[settings.mapStyle].theme,
-  labels: settings.labels,
+  ink: MAP_STYLES[settings.mapStyle].ink,
   allTrails: settings.allTrails,
   filter,
   route,
@@ -200,7 +201,7 @@ async function refresh() {
       pending = false;
       pollTimer = setTimeout(refresh, delay);
     }
-    requestAnimationFrame(renderStatus); // after the new data has been drawn
+    renderStatus();
   }
 }
 
@@ -346,22 +347,6 @@ map.on('click', (e) => {
 map.on('mousemove', (e) => {
   const ac = coarsePointer ? null : layer.hitTest(e.containerPoint);
   $('map').classList.toggle('hovering', Boolean(ac));
-  const tip = $('tooltip');
-  if (!ac) {
-    tip.hidden = true;
-    return;
-  }
-  $('tt-callsign').textContent = ac.callsign || ac.reg || ac.hex.toUpperCase();
-  $('tt-type').textContent = [ac.type, ac.reg].filter(Boolean).join(' · ') || 'Unknown type';
-  $('tt-alt').textContent = `${formatAlt(ac)} · ${formatSpeed(ac.gs)}`;
-  tip.hidden = false;
-  const { clientX: x, clientY: y } = e.originalEvent;
-  const w = tip.offsetWidth;
-  tip.style.left = `${x + 16 + w > innerWidth ? x - 16 - w : x + 16}px`;
-  tip.style.top = `${y + 12}px`;
-});
-map.on('mouseout', () => {
-  $('tooltip').hidden = true;
 });
 
 map.on('dragstart', () => setFollowing(false));
@@ -370,43 +355,19 @@ map.on('moveend', () => {
   refreshSoon();
 });
 
-// ── Status bar ───────────────────────────────────────────────────────────
+// ── Problems, notices and data credit ────────────────────────────────────
 
 const nf = new Intl.NumberFormat();
+let credit = ''; // the live data source's credit, shown with the map credits
 
 function renderStatus() {
-  const el = $('status');
   const demo = source?.mode === 'demo';
-  const stale = status.lastUpdate && Date.now() - status.lastUpdate > 30_000;
-  el.classList.toggle('live', !demo && !status.error && Boolean(status.lastUpdate) && !stale);
-  el.classList.toggle('demo', demo);
-  el.classList.toggle('error', Boolean(status.error) || Boolean(stale));
-
-  let text;
-  if (!source || (!status.lastUpdate && !status.error)) {
-    text = source?.progress ? `Connecting to ${source.progress}…` : 'Connecting…';
-  }
-  else if (status.error && !status.lastUpdate) text = 'No connection to flight data';
-  else {
-    text = `${nf.format(layer.visibleCount)} aircraft`;
-    if (status.error) text += ' · retrying…';
-    else text += ` · ${formatAgo(Date.now() - status.lastUpdate)}`;
-  }
-  $('status-text').textContent = text;
-  el.title = status.error || '';
-
-  const src = $('status-source');
-  src.textContent = '';
   const provider = PROVIDERS[status.sourceId];
-  if (provider) {
-    const a = document.createElement('a');
-    a.href = provider.home;
-    a.target = '_blank';
-    a.rel = 'noopener';
-    a.textContent = provider.name;
-    src.append('Data: ', a);
-  } else if (demo) {
-    src.textContent = 'Simulated';
+  const next = provider ? `Flight data: <a href="${provider.home}" target="_blank" rel="noopener">${provider.name}</a>` : '';
+  if (next !== credit) {
+    if (credit) map.attributionControl.removeAttribution(credit);
+    if (next) map.attributionControl.addAttribution(next);
+    credit = next;
   }
 
   // Before anything has loaded, explain a failure straight away; later, ride out brief hiccups.
@@ -420,7 +381,6 @@ function renderStatus() {
     notice.textContent = `Showing traffic within ${coverage.radius} nm of the map centre · zoom in to see everything`;
   }
 }
-setInterval(renderStatus, 1000);
 
 $('banner-retry').addEventListener('click', () => {
   status.failures = 0;
@@ -605,7 +565,6 @@ function bindFilters() {
     filter = makeFilter(f);
     sync();
     persist();
-    requestAnimationFrame(() => requestAnimationFrame(renderStatus)); // after the next draw
   };
 
   text.addEventListener('input', () => {
@@ -637,18 +596,12 @@ function bindFilters() {
 bindFilters();
 
 function bindSettings() {
-  const labels = $('s-labels');
   const trails = $('s-trails');
-  labels.checked = settings.labels;
   trails.checked = settings.allTrails;
 
   bindChoice($('s-map'), settings.mapStyle, (v) => {
     settings.mapStyle = v;
     applyMapStyle();
-    persist();
-  });
-  labels.addEventListener('change', () => {
-    settings.labels = labels.checked;
     persist();
   });
   trails.addEventListener('change', () => {
