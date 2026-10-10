@@ -15,7 +15,7 @@ import {
   EMERGENCY_FILL,
   GROUND_FILL,
   REALISTIC,
-} from './icons.js?v=11';
+} from './icons.js?v=12';
 import { destinationPoint, greatCirclePoints } from './shared/geo.js';
 import { isEmergency, shortAlt } from './format.js';
 
@@ -211,7 +211,7 @@ export const AircraftLayer = L.Layer.extend({
   _drawShadow(ctx, hit, iconPx, dpr, isSelected) {
     const { ac, x, y } = hit;
     const px = this._size(ac, iconPx, isSelected);
-    const lift = ac.onGround ? 0.8 : 1.6 + 3.4 * Math.min(1, Math.max(0, (ac.alt ?? 0) / 40000));
+    const lift = ac.onGround ? 0.6 : 1.2 + 2.4 * Math.min(1, Math.max(0, (ac.alt ?? 0) / 40000));
     const off = lift * (px / 28);
     const img = shadowSprite(ac._shape, px, dpr);
     const full = px + SHADOW_PAD * 2;

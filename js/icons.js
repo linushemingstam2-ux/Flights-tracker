@@ -1,7 +1,8 @@
-// Aircraft symbols. Each model in aircraft-models.js is turned into true-to-scale top-view
-// geometry, then painted once per colour and size into a sprite: an outline for legibility,
-// shaded cylindrical fuselage, lit wings with control-surface lines, engines with intakes and
-// exhausts, cockpit glass and ambient occlusion where parts meet.
+// Aircraft symbols. Each model in aircraft-models.js is turned into top-view geometry from its
+// real dimensions, nudged towards classic map-icon proportions (a slightly fuller fuselage,
+// wings and engines) so every type stays legible at a glance. It is painted once per colour and
+// size into a sprite: a flat silhouette with a crisp outline, finished with just a little depth —
+// a soft sheen along the fuselage, gentle tone steps between parts and fine seams where they meet.
 // Helicopter rotors are animated by the map layer.
 
 import { MODELS, modelIdFor } from './aircraft-models.js?v=9';
@@ -135,18 +136,6 @@ function buildAirframe(m) {
     const { y, len, t } = m.fin;
     g.fin = mirrorPoly([[0, y], [t * 0.5, y + len * 0.32], [t * 0.42, y + len * 0.78], [t * 0.18, y + len], [0, y + len]]);
   }
-  // Flap-track fairings peek out behind the trailing edge on airliners.
-  g.tracks = [];
-  const n = m.wing.tracks || 0;
-  for (let i = 0; i < n; i++) {
-    const f = 0.22 + (0.5 * i) / Math.max(1, n - 1);
-    const x = wr.x0 + f * (wr.sb - wr.x0);
-    const y = wr.te(x);
-    const w = m.S * 0.0085;
-    const l = m.S * 0.022;
-    const canoe = [[x - w / 2, y - l * 0.6], [x + w / 2, y - l * 0.6], [x + w * 0.3, y + l * 0.45], [x, y + l * 0.7], [x - w * 0.3, y + l * 0.45]];
-    g.tracks.push(canoe, flipX(canoe));
-  }
   g.fans = [];
   for (const e of m.fans || []) {
     const nc = nacelle(e.x, wr.le(e.x) - e.len * e.lead, e.len, e.d);
@@ -174,21 +163,6 @@ function buildAirframe(m) {
     for (const k of [nc, mirrorNacelle(nc)]) g.props.push({ nacelle: k, x: k.cx, y: p.front + p.len * 0.1, d: p.d });
   }
   if (m.noseProp) g.props.push({ nacelle: null, x: 0, y: -0.06, d: m.noseProp.d, spinner: true });
-  // Cockpit glass: a wrap-around visor on the nose (or canopy on small aircraft).
-  const nl = m.nose.len;
-  const yf = m.light || m.kind === 'glider' ? nl * 1.15 : nl * 0.42;
-  const yr = m.light || m.kind === 'glider' ? nl * 1.15 + m.L * 0.12 : nl * 0.66;
-  g.cockpit = { yf, yr, w: halfWidth(m, yr) * (m.light ? 0.86 : 0.8), canopy: m.light || m.kind === 'glider' };
-  if (m.deck) {
-    const dw = m.W * 0.37;
-    const pts = [[0, nl * 0.5]];
-    for (let i = 1; i <= 8; i++) {
-      const y = nl * 0.5 + (nl * 0.9 * i) / 8;
-      pts.push([dw * Math.sqrt(i / 8), y]);
-    }
-    pts.push([dw, m.deck - 3], [dw * 0.55, m.deck], [0, m.deck + 0.4]);
-    g.deck = mirrorPoly(pts);
-  }
   g.rotodome = m.rotodome ? { x: 0, y: m.rotodome.y, r: m.rotodome.d / 2 } : null;
   return g;
 }
@@ -225,7 +199,6 @@ function buildFighter(m) {
   const finAt = (cx) => [[cx, fy], [cx + 0.14, fy + L * 0.15], [cx + 0.1, fy + L * 0.28], [cx - 0.1, fy + L * 0.28], [cx - 0.14, fy + L * 0.15]];
   if (m.twin) g.fins.push(finAt(W * 0.42), finAt(-W * 0.42));
   else g.fins.push(finAt(0));
-  g.cockpit = { yf: L * 0.13, yr: L * 0.29, w: halfWidth(g.m, L * 0.22) * 0.72, canopy: true };
   g.nozzles = m.twin ? [[W * 0.24, L], [-W * 0.24, L]] : [[0, L]];
   return g;
 }
@@ -259,8 +232,6 @@ function buildHeli(m) {
       g.skids.push(tube, flipX(tube));
     }
   }
-  g.glass = { yf: Lf * 0.015, yr: Lf * 0.17, w: hw * 0.86 };
-  g.exhausts = [[hw * 0.4, Lf * 0.5], [-hw * 0.4, Lf * 0.5]];
   g.hubs = m.tandem ? [[0, Lf * 0.1], [0, Lf * 0.88]] : [[0, Lf * 0.35]];
   g.R = R;
   return g;
@@ -275,7 +246,7 @@ function eachPoint(g, fn) {
     else if (Array.isArray(v)) v.forEach(walk);
     else if (v.pts) walk(v.pts);
   };
-  for (const k of ['fuselage', 'wings', 'ht', 'fin', 'fins', 'tracks', 'body', 'stab', 'tailFin', 'skids', 'deck']) walk(g[k]);
+  for (const k of ['fuselage', 'wings', 'ht', 'fin', 'fins', 'body', 'stab', 'tailFin', 'skids']) walk(g[k]);
   for (const k of ['fans', 'rear', 'otw', 'pylons']) walk(g[k]);
   if (g.center) walk(g.center);
   for (const p of g.props || []) {
@@ -289,13 +260,39 @@ function eachPoint(g, fn) {
   }
 }
 
+// Classic map icons are drawn a touch fuller than life: at 20–40 px a true-to-scale airliner is
+// a hairline. These factors keep each type recognisable while giving every symbol solid weight.
+const FULLER = { body: 1.32, chord: 1.12, engine: 1.15 };
+
+function iconic(m) {
+  if (m.kind === 'heli') return { ...m, Wc: m.Wc * 1.2 };
+  if (m.kind === 'fighter') return { ...m, W: m.W * 1.2 };
+  if (!m.wing) return m;
+  const W = m.W * FULLER.body;
+  const grow = (W - m.W) / 2;
+  const chord = (s, f) => s && { ...s, cr: s.cr * f, ct: s.ct * f };
+  const engine = (e) => ({ ...e, d: e.d * FULLER.engine });
+  return {
+    ...m,
+    W,
+    wing: chord(m.wing, FULLER.chord),
+    ht: chord(m.ht, 1.1),
+    fin: m.fin && { ...m.fin, t: m.fin.t * FULLER.body },
+    fans: m.fans?.map(engine),
+    rear: m.rear?.map((e) => ({ ...engine(e), x: e.x + grow })),
+    center: m.center && engine(m.center),
+    otw: m.otw?.map(engine),
+    props: m.props?.map((p) => ({ ...p, w: p.w * FULLER.engine })),
+  };
+}
+
 const GEOMETRY = new Map();
 
 /** Geometry for a model, transformed into sprite units (cached). */
 function geometry(id) {
   let g = GEOMETRY.get(id);
   if (g) return g;
-  const m = MODELS[id] || MODELS.a320;
+  const m = iconic(MODELS[id] || MODELS.a320);
   if (m.kind === 'balloon' || m.kind === 'ground') {
     g = { kind: m.kind, m, k: 1, size: m.kind === 'balloon' ? m.D : Math.max(m.L, m.W) };
     GEOMETRY.set(id, g);
@@ -320,7 +317,7 @@ function geometry(id) {
     return v;
   };
   const out = { kind: g.kind, m: g.m, k, size: extent, cy };
-  for (const key of ['fuselage', 'wings', 'ht', 'fin', 'fins', 'tracks', 'body', 'stab', 'tailFin', 'skids', 'deck', 'pylons', 'nozzles', 'exhausts', 'hubs']) {
+  for (const key of ['fuselage', 'wings', 'ht', 'fin', 'fins', 'body', 'stab', 'tailFin', 'skids', 'pylons', 'nozzles', 'hubs']) {
     if (g[key]) out[key] = map(g[key]);
   }
   const mapNac = (n) => n && { ...n, pts: map(n.pts), cx: T([n.cx, 0])[0], front: T([0, n.front])[1], len: n.len * k, r: n.r * k };
@@ -330,30 +327,9 @@ function geometry(id) {
   out.center = mapNac(g.center);
   out.props = (g.props || []).map((p) => ({ ...p, nacelle: mapNac(p.nacelle), x: T([p.x, p.y])[0], y: T([p.x, p.y])[1], d: p.d * k }));
   out.tTail = g.tTail;
-  if (g.wing?.le) {
-    const w = g.wing;
-    out.wingLines = {
-      le: [T([w.x0, w.le(w.x0)]), T([w.sb, w.tipLE])],
-      hinge: Array.from({ length: 9 }, (_, i) => {
-        const x = w.x0 + ((w.sb - w.x0) * i) / 8;
-        const te = w.te(x);
-        return T([x, te - (te - w.le(x)) * 0.23]);
-      }),
-      aileron: (() => {
-        const x = w.x0 + (w.sb - w.x0) * 0.68;
-        const te = w.te(x);
-        return [T([x, te - (te - w.le(x)) * 0.23]), T([x, te])];
-      })(),
-      yTop: T([0, w.le(w.x0)])[1],
-      yBottom: T([0, w.tipTE])[1],
-    };
-  }
-  if (g.htInfo) out.htLines = { le: [T([g.htInfo.x0, g.htInfo.le(g.htInfo.x0)]), T([g.htInfo.sb, g.htInfo.tipLE])] };
-  if (g.cockpit) {
-    const c = g.cockpit;
-    out.cockpit = { yf: T([0, c.yf])[1], yr: T([0, c.yr])[1], w: c.w * k, canopy: c.canopy };
-  }
-  if (g.glass) out.glass = { yf: T([0, g.glass.yf])[1], yr: T([0, g.glass.yr])[1], w: g.glass.w * k };
+  // Vertical extent of the wing and tailplane, for their leading-to-trailing-edge light.
+  if (g.wing?.le) out.wingSpanY = [T([0, g.wing.le(g.wing.x0)])[1], T([0, g.wing.tipTE])[1]];
+  if (g.htInfo) out.htTop = T([0, g.htInfo.le(g.htInfo.x0)])[1];
   if (g.tailRotor) out.tailRotor = { x: T([g.tailRotor.x, g.tailRotor.y])[0], y: T([g.tailRotor.x, g.tailRotor.y])[1], d: g.tailRotor.d * k };
   if (g.rotodome) out.rotodome = { x: BOX / 2, y: T([0, g.rotodome.y])[1], r: g.rotodome.r * k };
   if (g.R) out.R = g.R * k;
@@ -427,29 +403,46 @@ function parseColor(c) {
 const mix = (a, b, t) => a.map((v, i) => Math.round(v + (b[i] - v) * t));
 const rgb = (c, a = 1) => (a === 1 ? `rgb(${c[0]},${c[1]},${c[2]})` : `rgba(${c[0]},${c[1]},${c[2]},${a})`);
 
+function rgbToHsl([r, g, b]) {
+  r /= 255;
+  g /= 255;
+  b /= 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  if (max === min) return [0, 0, l];
+  const d = max - min;
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  const h = max === r ? (g - b) / d + (g < b ? 6 : 0) : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return [h * 60, s, l];
+}
+
+/** Lighter (t > 0) or deeper (t < 0) shade of a colour. Deeper shades keep their hue and
+ * saturation, so a yellow deepens to gold rather than turning olive. */
+function tone(c, t) {
+  if (t >= 0) return mix(c, [255, 255, 255], t);
+  const [h, s, l] = rgbToHsl(c);
+  return hslToRgb(h, s, l * (1 + t));
+}
+
+/** The palette for one symbol: the body colour plus gentle tone steps for the other parts. */
 function paintFor(fill, military) {
   if (fill === REALISTIC) {
-    const body = military ? [138, 148, 158] : [243, 245, 248];
+    const body = military ? [150, 160, 170] : [247, 248, 250];
     return {
       body,
-      wing: military ? [126, 136, 146] : [210, 215, 222],
-      tail: military ? [132, 142, 152] : [222, 226, 232],
-      engine: military ? [104, 112, 121] : [188, 195, 204],
-      fin: military ? [128, 138, 148] : [234, 237, 241],
+      wing: military ? [138, 148, 158] : [226, 230, 235],
+      tail: military ? [144, 154, 164] : [234, 237, 241],
+      engine: military ? [112, 120, 130] : [196, 202, 210],
+      fin: military ? [136, 146, 156] : [228, 232, 237],
     };
   }
   const c = parseColor(fill);
-  return {
-    body: c,
-    wing: mix(c, [0, 0, 0], 0.08),
-    tail: mix(c, [0, 0, 0], 0.05),
-    engine: mix(c, [92, 100, 112], 0.48),
-    fin: mix(c, [0, 0, 0], 0.13),
-  };
+  return { body: c, wing: tone(c, -0.075), tail: tone(c, -0.05), engine: tone(c, -0.2), fin: tone(c, -0.12) };
 }
 
-const METAL = [64, 70, 80];
-const OUTLINE = 'rgba(6, 9, 14, 0.9)';
+const OUTLINE = 'rgba(8, 11, 16, 0.86)';
+const SEAM = 'rgba(0, 0, 0, 0.3)';
 
 // ── Painting ──────────────────────────────────────────────────────────────
 
@@ -478,7 +471,6 @@ function pathsFor(id, g) {
   if (g.ht) P.ht = union(g.ht);
   if (g.fin) P.fin = path(g.fin);
   if (g.fins) P.fins = union(g.fins);
-  if (g.tracks?.length) P.tracks = union(g.tracks);
   if (g.fans?.length) P.fans = union(g.fans.map((n) => n.pts));
   if (g.rear?.length) P.rear = union(g.rear.map((n) => n.pts));
   if (g.pylons?.length) P.pylons = union(g.pylons);
@@ -486,7 +478,6 @@ function pathsFor(id, g) {
   if (g.center) P.center = path(g.center.pts);
   const propNacelles = (g.props || []).filter((p) => p.nacelle);
   if (propNacelles.length) P.propNacelles = union(propNacelles.map((p) => p.nacelle.pts));
-  if (g.deck) P.deck = path(g.deck);
   if (g.body) P.body = path(g.body);
   if (g.stab) P.stab = union(g.stab);
   if (g.tailFin) P.tailFin = path(g.tailFin);
@@ -501,19 +492,6 @@ function pathsFor(id, g) {
   return P;
 }
 
-/** Shading across a part's width: dark edges, a soft glossy ridge down the middle. */
-function cylinder(ctx, cx, halfW, strength = 1) {
-  const g = ctx.createLinearGradient(cx - halfW, 0, cx + halfW, 0);
-  g.addColorStop(0, `rgba(0,0,0,${0.36 * strength})`);
-  g.addColorStop(0.17, `rgba(0,0,0,${0.1 * strength})`);
-  g.addColorStop(0.38, `rgba(255,255,255,${0.06 * strength})`);
-  g.addColorStop(0.5, `rgba(255,255,255,${0.5 * strength})`);
-  g.addColorStop(0.62, `rgba(255,255,255,${0.06 * strength})`);
-  g.addColorStop(0.83, `rgba(0,0,0,${0.1 * strength})`);
-  g.addColorStop(1, `rgba(0,0,0,${0.36 * strength})`);
-  return g;
-}
-
 function fillWith(ctx, p, style) {
   ctx.fillStyle = style;
   ctx.fill(p);
@@ -526,8 +504,32 @@ function clipped(ctx, p, fn) {
   ctx.restore();
 }
 
-/** Soft shadow cast by `caster` onto `receiver` (ambient occlusion where parts meet). */
-function occlude(ctx, receiver, caster, blur, alpha = 0.42) {
+/** A soft, low sheen across a rounded part: a light ridge down the middle, slightly darker sides. */
+function sheen(ctx, p, cx, halfW, strength = 1) {
+  clipped(ctx, p, () => {
+    const g = ctx.createLinearGradient(cx - halfW, 0, cx + halfW, 0);
+    g.addColorStop(0, `rgba(0,0,0,${0.16 * strength})`);
+    g.addColorStop(0.3, 'rgba(0,0,0,0)');
+    g.addColorStop(0.5, `rgba(255,255,255,${0.3 * strength})`);
+    g.addColorStop(0.7, 'rgba(0,0,0,0)');
+    g.addColorStop(1, `rgba(0,0,0,${0.16 * strength})`);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, BOX, BOX);
+  });
+}
+
+/** A fine seam: the outline of `upper` drawn only where it lies over `lower`. */
+function seam(ctx, lower, upper, u, alpha = 1) {
+  clipped(ctx, lower, () => {
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = SEAM;
+    ctx.lineWidth = u * 1.1;
+    ctx.stroke(upper);
+  });
+}
+
+/** A faint, tight contact shadow from `caster` onto `receiver` — the only real depth cue. */
+function contact(ctx, receiver, caster, blur, alpha = 0.2) {
   ctx.save();
   ctx.clip(receiver);
   // Draw the caster far off to the side and offset only its shadow back into place, so the
@@ -542,302 +544,150 @@ function occlude(ctx, receiver, caster, blur, alpha = 0.42) {
   ctx.restore();
 }
 
-function drawNacelle(ctx, n, color, u, prop) {
-  const p = path(n.pts);
+/** Lifting surfaces: flat, with the leading edge catching a little more light than the trailing. */
+function surface2d(ctx, p, color, yTop, yBottom) {
   fillWith(ctx, p, rgb(color));
   clipped(ctx, p, () => {
-    ctx.fillStyle = cylinder(ctx, n.cx, n.r, 1.1);
-    ctx.fillRect(n.cx - n.r, n.front - 1, n.r * 2, n.len + 2);
-    if (prop) {
-      // Spinner: polished cone at the front.
-      const g = ctx.createLinearGradient(n.cx - n.r, 0, n.cx + n.r, 0);
-      g.addColorStop(0, 'rgb(70,76,86)');
-      g.addColorStop(0.45, 'rgb(225,229,235)');
-      g.addColorStop(1, 'rgb(70,76,86)');
-      ctx.fillStyle = g;
-      ctx.fillRect(n.cx - n.r, n.front - 1, n.r * 2, n.len * 0.12 + 1);
-      ctx.fillStyle = 'rgba(0,0,0,0.3)';
-      ctx.fillRect(n.cx - n.r, n.front + n.len * 0.12, n.r * 2, Math.max(0.25, u * 0.4));
-      return;
-    }
-    // Intake lip and inlet shadow.
-    ctx.fillStyle = 'rgba(10,14,20,0.55)';
-    ctx.fillRect(n.cx - n.r, n.front - 1, n.r * 2, n.len * 0.045 + 1);
-    ctx.fillStyle = 'rgba(255,255,255,0.45)';
-    ctx.fillRect(n.cx - n.r, n.front + n.len * 0.045, n.r * 2, Math.max(0.2, u * 0.35));
-    // Fan nozzle step and the hot section behind it.
-    ctx.fillStyle = 'rgba(0,0,0,0.32)';
-    ctx.fillRect(n.cx - n.r, n.front + n.len * 0.7, n.r * 2, Math.max(0.2, u * 0.4));
-    const core = ctx.createLinearGradient(n.cx - n.r * 0.7, 0, n.cx + n.r * 0.7, 0);
-    core.addColorStop(0, rgb(METAL));
-    core.addColorStop(0.5, 'rgb(150,156,166)');
-    core.addColorStop(1, rgb(METAL));
-    ctx.fillStyle = core;
-    ctx.fillRect(n.cx - n.r, n.front + n.len * 0.73, n.r * 2, n.len * 0.35);
-    if (n.chevrons) {
-      ctx.beginPath();
-      const y = n.front + n.len * 0.71;
-      for (let i = 0; i <= 8; i++) {
-        const x = n.cx - n.r * 0.88 + (n.r * 1.76 * i) / 8;
-        ctx.lineTo(x, y + (i % 2 ? n.len * 0.025 : 0));
-      }
-      ctx.strokeStyle = 'rgba(0,0,0,0.35)';
-      ctx.lineWidth = Math.max(0.2, u * 0.3);
-      ctx.stroke();
-    }
+    const g = ctx.createLinearGradient(0, yTop, 0, yBottom);
+    g.addColorStop(0, 'rgba(255,255,255,0.12)');
+    g.addColorStop(0.55, 'rgba(255,255,255,0)');
+    g.addColorStop(1, 'rgba(0,0,0,0.08)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, BOX, BOX);
   });
 }
 
-function strokeLine(ctx, pts, style, width) {
-  ctx.beginPath();
-  ctx.moveTo(pts[0][0], pts[0][1]);
-  for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
-  ctx.strokeStyle = style;
-  ctx.lineWidth = width;
-  ctx.stroke();
-}
-
-/** The cockpit visor or canopy, with a glint of reflected sky. */
-function drawGlass(ctx, c, u) {
-  const { yf, yr, w } = c;
-  const p = new Path2D();
-  if (c.canopy) {
-    p.ellipse(BOX / 2, (yf + yr) / 2, w, (yr - yf) / 2, 0, 0, Math.PI * 2);
-  } else {
-    const h = yr - yf;
-    p.moveTo(BOX / 2 - w, yr);
-    p.quadraticCurveTo(BOX / 2, yf - h * 0.35, BOX / 2 + w, yr);
-    p.lineTo(BOX / 2 + w * 0.9, yr + h * 0.22);
-    p.quadraticCurveTo(BOX / 2, yr - h * 0.32, BOX / 2 - w * 0.9, yr + h * 0.22);
-    p.closePath();
-  }
-  const g = ctx.createLinearGradient(0, yf, 0, yr);
-  g.addColorStop(0, 'rgb(40,62,92)');
-  g.addColorStop(1, 'rgb(10,16,28)');
-  fillWith(ctx, p, g);
-  clipped(ctx, p, () => {
-    ctx.beginPath();
-    ctx.ellipse(BOX / 2 - w * 0.25, yf + (yr - yf) * 0.32, w * 0.5, (yr - yf) * 0.18, -0.35, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255,255,255,0.28)';
-    ctx.fill();
+function nacelles(ctx, list, P, color, u) {
+  if (!P) return;
+  fillWith(ctx, P, rgb(color));
+  for (const n of list) sheen(ctx, path(n.pts), n.cx, n.r, 0.8);
+  // A darker intake ring at the front, kept small so it reads as a detail, not a blot.
+  clipped(ctx, P, () => {
+    ctx.fillStyle = 'rgba(0,0,0,0.26)';
+    for (const n of list) ctx.fillRect(n.cx - n.r, n.front - 1, n.r * 2, 1 + Math.max(u * 0.7, n.len * 0.06));
   });
 }
 
 function drawProps(ctx, props, u) {
   for (const p of props) {
-    const t = Math.max(0.7, p.d * 0.06);
+    const t = Math.max(u * 0.9, p.d * 0.05);
     const g = ctx.createLinearGradient(p.x - p.d / 2, 0, p.x + p.d / 2, 0);
-    g.addColorStop(0, 'rgba(18,22,28,0)');
-    g.addColorStop(0.07, 'rgba(18,22,28,0.42)');
-    g.addColorStop(0.5, 'rgba(18,22,28,0.26)');
-    g.addColorStop(0.93, 'rgba(18,22,28,0.42)');
-    g.addColorStop(1, 'rgba(18,22,28,0)');
+    g.addColorStop(0, 'rgba(14,18,24,0)');
+    g.addColorStop(0.12, 'rgba(14,18,24,0.34)');
+    g.addColorStop(0.5, 'rgba(14,18,24,0.2)');
+    g.addColorStop(0.88, 'rgba(14,18,24,0.34)');
+    g.addColorStop(1, 'rgba(14,18,24,0)');
     ctx.fillStyle = g;
     ctx.beginPath();
     ctx.ellipse(p.x, p.y, p.d / 2, t / 2, 0, 0, Math.PI * 2);
     ctx.fill();
-    if (p.spinner) {
-      const r = Math.max(0.6, p.d * 0.07);
-      const s = ctx.createRadialGradient(p.x - r * 0.3, p.y - r * 0.3, 0, p.x, p.y, r);
-      s.addColorStop(0, 'rgb(235,238,242)');
-      s.addColorStop(1, 'rgb(80,86,96)');
-      ctx.fillStyle = s;
-      ctx.beginPath();
-      ctx.ellipse(p.x, p.y + r * 0.4, r, r * 1.2, 0, 0, Math.PI * 2);
-      ctx.fill();
-    }
   }
+}
+
+function outline(ctx, p, u) {
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = OUTLINE;
+  ctx.lineWidth = u * 1.7;
+  ctx.stroke(p);
 }
 
 function paintAirframe(ctx, id, g, P, paint, u, blur) {
   const C = paint;
-  // 1. One clean outer outline around the whole aircraft.
-  ctx.lineJoin = 'round';
-  ctx.lineCap = 'round';
-  ctx.strokeStyle = OUTLINE;
-  ctx.lineWidth = u * 1.5;
-  ctx.stroke(P.solid);
+  const [yTop, yBottom] = g.wingSpanY ?? [0, BOX];
+  outline(ctx, P.solid, u);
 
-  // 2. Under the wing: flap-track fairings and turbofans (the wing shades their tops).
-  if (P.tracks) {
-    fillWith(ctx, P.tracks, rgb(mix(C.wing, [0, 0, 0], 0.1)));
-    ctx.strokeStyle = 'rgba(0,0,0,0.25)';
-    ctx.lineWidth = u * 0.5;
-    ctx.stroke(P.tracks);
+  // Under-wing engines first: the wing covers their rear half, as seen from above.
+  nacelles(ctx, g.fans, P.fans, C.engine, u);
+  surface2d(ctx, P.wings, C.wing, yTop, yBottom);
+  if (P.fans) seam(ctx, P.fans, P.wings, u);
+  const lowTail = P.ht && !g.tTail;
+  if (lowTail) surface2d(ctx, P.ht, C.tail, g.htTop ?? yTop, BOX);
+
+  // Propeller nacelles sit on top of the wing.
+  if (P.propNacelles) {
+    contact(ctx, P.wings, P.propNacelles, blur * 0.6, 0.18);
+    nacelles(ctx, g.props.filter((p) => p.nacelle).map((p) => p.nacelle), P.propNacelles, C.engine, u);
+    seam(ctx, P.wings, P.propNacelles, u, 0.8);
   }
-  for (const n of g.fans) drawNacelle(ctx, n, C.engine, u, false);
-  if (P.fans) occlude(ctx, P.fans, P.wings, blur, 0.5);
 
-  // 3. Wings and (conventional) tailplane.
-  const surfaces = (p, color, lines) => {
-    fillWith(ctx, p, rgb(color));
-    clipped(ctx, p, () => {
-      if (lines) {
-        const lg = ctx.createLinearGradient(0, lines.yTop, 0, lines.yBottom);
-        lg.addColorStop(0, 'rgba(255,255,255,0.18)');
-        lg.addColorStop(0.5, 'rgba(255,255,255,0)');
-        lg.addColorStop(1, 'rgba(0,0,0,0.2)');
-        ctx.fillStyle = lg;
-        ctx.fillRect(0, 0, BOX, BOX);
-      }
-    });
-  };
-  surfaces(P.wings, C.wing, g.wingLines);
-  if (g.wingLines) {
-    clipped(ctx, P.wings, () => {
-      for (const s of [1, -1]) {
-        const mirror = (pts) => pts.map(([x, y]) => [s > 0 ? x : BOX - x, y]);
-        strokeLine(ctx, mirror(g.wingLines.le), 'rgba(255,255,255,0.5)', u * 0.7);
-        strokeLine(ctx, mirror(g.wingLines.hinge), 'rgba(0,0,0,0.2)', u * 0.4);
-        strokeLine(ctx, mirror(g.wingLines.aileron), 'rgba(0,0,0,0.22)', u * 0.4);
-      }
-    });
-  }
-  if (P.ht && !g.tTail && g.kind !== 'fighter') {
-    surfaces(P.ht, C.tail, null);
-    if (g.htLines) clipped(ctx, P.ht, () => {
-      for (const s of [1, -1]) strokeLine(ctx, g.htLines.le.map(([x, y]) => [s > 0 ? x : BOX - x, y]), 'rgba(255,255,255,0.45)', u * 0.6);
-    });
-  }
-  if (g.kind === 'fighter' && P.ht) surfaces(P.ht, C.tail, null);
-
-  // 4. Propeller nacelles sit on top of the wing.
-  if (P.propNacelles) occlude(ctx, P.wings, P.propNacelles, blur, 0.35);
-  for (const p of g.props) if (p.nacelle) drawNacelle(ctx, p.nacelle, C.engine, u, true);
-
-  // 5. Fuselage, shading the wing roots around it.
-  occlude(ctx, P.wings, P.fuselage, blur, 0.45);
-  if (P.ht && !g.tTail) occlude(ctx, P.ht, P.fuselage, blur * 0.8, 0.4);
+  // Fuselage, with a faint contact shadow and a crisp seam where it meets the wings and tail.
+  const under = new Path2D();
+  under.addPath(P.wings);
+  if (lowTail) under.addPath(P.ht);
+  contact(ctx, under, P.fuselage, blur * 0.7, 0.2);
+  seam(ctx, under, P.fuselage, u);
   fillWith(ctx, P.fuselage, rgb(C.body));
-  clipped(ctx, P.fuselage, () => {
-    ctx.fillStyle = cylinder(ctx, BOX / 2, g.W / 2, 1);
-    ctx.fillRect(0, 0, BOX, BOX);
-    const lg = ctx.createLinearGradient(0, 2, 0, BOX - 2);
-    lg.addColorStop(0, 'rgba(255,255,255,0.12)');
-    lg.addColorStop(0.35, 'rgba(255,255,255,0)');
-    lg.addColorStop(1, 'rgba(0,0,0,0.14)');
-    ctx.fillStyle = lg;
-    ctx.fillRect(0, 0, BOX, BOX);
-  });
-  if (P.deck) {
-    fillWith(ctx, P.deck, 'rgba(255,255,255,0.14)');
-    ctx.strokeStyle = 'rgba(0,0,0,0.18)';
-    ctx.lineWidth = u * 0.45;
-    ctx.stroke(P.deck);
-  }
-  if (g.cockpit) drawGlass(ctx, g.cockpit, u);
+  sheen(ctx, P.fuselage, BOX / 2, g.W / 2, 1);
 
-  // 6. Engines on the fuselage and over the wing (each shading what it sits on).
-  if (P.pylons) {
-    occlude(ctx, P.fuselage, P.pylons, blur * 0.6, 0.3);
-    fillWith(ctx, P.pylons, rgb(C.wing));
+  // Engines on the fuselage and over the wing.
+  if (P.pylons) fillWith(ctx, P.pylons, rgb(C.wing));
+  for (const [list, Pn] of [[g.rear, P.rear], [g.center ? [g.center] : [], P.center], [g.otw, P.otw]]) {
+    if (!Pn) continue;
+    contact(ctx, g.otw === list ? P.wings : P.fuselage, Pn, blur * 0.5, 0.18);
+    nacelles(ctx, list, Pn, C.engine, u);
+    seam(ctx, g.otw === list ? P.wings : P.fuselage, Pn, u, 0.8);
   }
-  if (P.rear) occlude(ctx, P.fuselage, P.rear, blur * 0.7, 0.35);
-  for (const n of g.rear) drawNacelle(ctx, n, C.engine, u, false);
-  if (g.center) {
-    occlude(ctx, P.fuselage, P.center, blur * 0.7, 0.35);
-    drawNacelle(ctx, g.center, C.engine, u, false);
-  }
-  if (P.otw) occlude(ctx, P.wings, P.otw, blur, 0.4);
-  for (const n of g.otw) drawNacelle(ctx, n, C.engine, u, false);
 
-  // 7. Fin(s), then a T-tail on top of the fin.
+  // Fin(s), then a T-tail on top.
   for (const f of [P.fin, P.fins]) {
     if (!f) continue;
-    occlude(ctx, P.fuselage, f, blur * 0.5, 0.3);
     fillWith(ctx, f, rgb(C.fin));
-    clipped(ctx, f, () => {
-      ctx.fillStyle = cylinder(ctx, BOX / 2, Math.max(u, g.W * 0.12), 0.9);
-      ctx.fillRect(0, 0, BOX, BOX);
-    });
+    sheen(ctx, f, BOX / 2, Math.max(u, g.W * 0.1), 0.8);
   }
   if (P.ht && g.tTail) {
-    occlude(ctx, P.fuselage, P.ht, blur, 0.35);
-    surfaces(P.ht, C.tail, null);
-    if (g.htLines) clipped(ctx, P.ht, () => {
-      for (const s of [1, -1]) strokeLine(ctx, g.htLines.le.map(([x, y]) => [s > 0 ? x : BOX - x, y]), 'rgba(255,255,255,0.45)', u * 0.6);
-    });
+    contact(ctx, P.fuselage, P.ht, blur * 0.6, 0.16);
+    surface2d(ctx, P.ht, C.tail, g.htTop ?? yTop, BOX);
+    seam(ctx, P.fuselage, P.ht, u, 0.8);
   }
   if (g.nozzles) {
     for (const [x, y] of g.nozzles) {
       ctx.beginPath();
-      ctx.ellipse(x, y - u * 0.4, g.W * 0.16, u * 0.9, 0, 0, Math.PI * 2);
-      ctx.fillStyle = rgb(METAL);
+      ctx.ellipse(x, y - u * 0.4, g.W * 0.15, u * 0.8, 0, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
       ctx.fill();
     }
   }
 
-  // 8. AWACS radar dome on its pylon.
+  // AWACS radar dome on its pylon.
   if (g.rotodome) {
     const { x, y, r } = g.rotodome;
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.strokeStyle = OUTLINE;
-    ctx.lineWidth = u * 1.5;
-    ctx.stroke();
-    const rg = ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.1, x, y, r);
-    rg.addColorStop(0, 'rgb(236,239,243)');
-    rg.addColorStop(1, 'rgb(150,158,168)');
-    ctx.fillStyle = rg;
-    ctx.fill();
-    ctx.fillStyle = 'rgba(20,24,30,0.75)';
-    ctx.fillRect(x - r, y - r * 0.12, r * 2, r * 0.24);
+    const dome = new Path2D();
+    dome.arc(x, y, r, 0, Math.PI * 2);
+    outline(ctx, dome, u);
+    fillWith(ctx, dome, rgb(tone(C.body, -0.04)));
+    sheen(ctx, dome, x, r, 0.7);
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.fillRect(x - r, y - r * 0.1, r * 2, r * 0.2);
   }
 
-  // 9. Spinning propellers.
   drawProps(ctx, g.props, u);
 }
 
 function paintHeli(ctx, g, P, paint, u, blur) {
   const C = paint;
-  ctx.lineJoin = 'round';
-  ctx.lineCap = 'round';
-  ctx.strokeStyle = OUTLINE;
-  ctx.lineWidth = u * 1.5;
-  ctx.stroke(P.solid);
-  if (P.skids) fillWith(ctx, P.skids, 'rgb(70,76,86)');
-  if (P.stab) {
-    fillWith(ctx, P.stab, rgb(C.tail));
-    occlude(ctx, P.stab, P.body, blur * 0.6, 0.35);
-  }
-  if (P.skids) occlude(ctx, P.skids, P.body, blur * 0.8, 0.45);
+  outline(ctx, P.solid, u);
+  if (P.skids) fillWith(ctx, P.skids, rgb(C.engine));
+  if (P.stab) surface2d(ctx, P.stab, C.tail, 0, BOX);
+  const under = new Path2D();
+  if (P.skids) under.addPath(P.skids);
+  if (P.stab) under.addPath(P.stab);
+  contact(ctx, under, P.body, blur * 0.6, 0.2);
+  seam(ctx, under, P.body, u);
   fillWith(ctx, P.body, rgb(C.body));
-  clipped(ctx, P.body, () => {
-    ctx.fillStyle = cylinder(ctx, BOX / 2, g.W / 2, 1);
-    ctx.fillRect(0, 0, BOX, BOX);
-  });
+  sheen(ctx, P.body, BOX / 2, g.W / 2, 1);
   fillWith(ctx, P.tailFin, rgb(C.fin));
-  clipped(ctx, P.tailFin, () => {
-    ctx.fillStyle = cylinder(ctx, BOX / 2, g.W * 0.14, 1);
-    ctx.fillRect(0, 0, BOX, BOX);
-  });
-  drawGlass(ctx, { ...g.glass, canopy: false }, u);
-  for (const [x, y] of g.exhausts) {
-    ctx.beginPath();
-    ctx.ellipse(x, y, g.W * 0.08, g.W * 0.13, 0, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(30,34,40,0.8)';
-    ctx.fill();
-  }
   if (g.tailRotor) {
     const { x, y, d } = g.tailRotor;
-    const tg = ctx.createLinearGradient(0, y - d / 2, 0, y + d / 2);
-    tg.addColorStop(0, 'rgba(18,22,28,0)');
-    tg.addColorStop(0.15, 'rgba(18,22,28,0.45)');
-    tg.addColorStop(0.85, 'rgba(18,22,28,0.45)');
-    tg.addColorStop(1, 'rgba(18,22,28,0)');
-    ctx.fillStyle = tg;
+    ctx.fillStyle = 'rgba(14,18,24,0.3)';
     ctx.beginPath();
-    ctx.ellipse(x, y, Math.max(0.5, u * 0.7), d / 2, 0, 0, Math.PI * 2);
+    ctx.ellipse(x, y, Math.max(u * 0.6, d * 0.06), d / 2, 0, 0, Math.PI * 2);
     ctx.fill();
   }
   for (const [x, y] of g.hubs) {
-    const r = Math.max(0.9, g.W * 0.14);
-    const hg = ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, 0, x, y, r);
-    hg.addColorStop(0, 'rgb(200,205,212)');
-    hg.addColorStop(1, 'rgb(40,45,52)');
-    ctx.fillStyle = hg;
     ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.arc(x, y, Math.max(u * 1.1, g.W * 0.13), 0, Math.PI * 2);
+    ctx.fillStyle = rgb(tone(C.engine, -0.25));
     ctx.fill();
   }
 }
@@ -846,38 +696,31 @@ function paintBalloon(ctx, paint, u) {
   const r = 22;
   const cx = BOX / 2;
   const cy = BOX / 2 - 3;
-  ctx.beginPath();
-  ctx.arc(cx, cy, r, 0, Math.PI * 2);
-  ctx.strokeStyle = OUTLINE;
-  ctx.lineWidth = u * 1.5;
-  ctx.stroke();
-  const g = ctx.createRadialGradient(cx - r * 0.35, cy - r * 0.4, r * 0.05, cx, cy, r);
-  g.addColorStop(0, rgb(mix(paint.body, [255, 255, 255], 0.55)));
-  g.addColorStop(0.55, rgb(paint.body));
-  g.addColorStop(1, rgb(mix(paint.body, [0, 0, 0], 0.35)));
-  ctx.fillStyle = g;
-  ctx.fill();
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(cx, cy, r, 0, Math.PI * 2);
-  ctx.clip();
-  ctx.strokeStyle = 'rgba(0,0,0,0.18)';
-  ctx.lineWidth = u * 0.6;
-  for (let i = 0; i < 12; i++) {
-    const a = (i / 12) * Math.PI * 2;
-    ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
-    ctx.stroke();
-  }
-  ctx.restore();
-  ctx.fillStyle = 'rgb(120,82,48)';
-  ctx.strokeStyle = OUTLINE;
-  ctx.lineWidth = u;
-  ctx.beginPath();
-  ctx.rect(cx - 3, cy + r + 2, 6, 5);
-  ctx.fill();
-  ctx.stroke();
+  const env = new Path2D();
+  env.arc(cx, cy, r, 0, Math.PI * 2);
+  outline(ctx, env, u);
+  fillWith(ctx, env, rgb(paint.body));
+  clipped(ctx, env, () => {
+    const g = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.35, r * 0.1, cx, cy, r);
+    g.addColorStop(0, 'rgba(255,255,255,0.28)');
+    g.addColorStop(0.6, 'rgba(255,255,255,0)');
+    g.addColorStop(1, 'rgba(0,0,0,0.14)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, BOX, BOX);
+    ctx.strokeStyle = 'rgba(0,0,0,0.12)';
+    ctx.lineWidth = u * 0.8;
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+      ctx.stroke();
+    }
+  });
+  const basket = new Path2D();
+  basket.rect(cx - 3, cy + r + 2, 6, 5);
+  outline(ctx, basket, u * 0.7);
+  fillWith(ctx, basket, 'rgb(134,96,60)');
 }
 
 function paintGround(ctx, paint, u) {
@@ -886,19 +729,14 @@ function paintGround(ctx, paint, u) {
   const x = BOX / 2 - w / 2;
   const y = BOX / 2 - h / 2;
   const p = new Path2D();
-  p.roundRect ? p.roundRect(x, y, w, h, 5) : p.rect(x, y, w, h);
-  ctx.strokeStyle = OUTLINE;
-  ctx.lineWidth = u * 1.5;
-  ctx.stroke(p);
+  p.roundRect ? p.roundRect(x, y, w, h, 6) : p.rect(x, y, w, h);
+  outline(ctx, p, u);
   fillWith(ctx, p, rgb(paint.body));
-  clipped(ctx, p, () => {
-    ctx.fillStyle = cylinder(ctx, BOX / 2, w / 2, 0.8);
-    ctx.fillRect(0, 0, BOX, BOX);
-  });
-  ctx.fillStyle = 'rgb(18,28,44)';
-  ctx.fillRect(x + 3, y + 7, w - 6, 8);
-  ctx.fillStyle = 'rgb(255,170,0)';
-  ctx.fillRect(x + 5, y + 19, w - 10, 3);
+  sheen(ctx, p, BOX / 2, w / 2, 0.8);
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.fillRect(x + 3, y + 7, w - 6, 7);
+  ctx.fillStyle = 'rgba(255,176,0,0.9)';
+  ctx.fillRect(x + 6, y + 19, w - 12, 3);
 }
 
 // ── Sprites ───────────────────────────────────────────────────────────────
@@ -946,18 +784,20 @@ export function sprite(id, fill, px, dpr) {
 /** Padding (CSS px) around a shadow sprite for its blur. */
 export const SHADOW_PAD = 6;
 
-/** A soft dark silhouette of the aircraft, drawn offset below it as a drop shadow. */
+/** A soft silhouette of the aircraft, drawn offset below it as a drop shadow. */
 export function shadowSprite(id, px, dpr) {
   return cached(`shadow|${id}|${px}|${dpr}`, () => {
     const g = geometry(id);
     const full = px + SHADOW_PAD * 2;
     const c = canvas(Math.ceil(full * dpr));
     const ctx = c.getContext('2d');
-    ctx.translate(SHADOW_PAD * dpr, SHADOW_PAD * dpr);
+    // Only the blurred shadow is wanted, so the shape itself is drawn far off-canvas.
+    ctx.shadowColor = 'rgba(0,0,0,0.42)';
+    ctx.shadowBlur = 2.4 * dpr;
+    ctx.shadowOffsetX = 1000 * dpr;
+    ctx.translate(SHADOW_PAD * dpr - 1000 * dpr, SHADOW_PAD * dpr);
     ctx.scale((px * dpr) / BOX, (px * dpr) / BOX);
-    ctx.shadowColor = 'rgba(0,0,0,0.6)';
-    ctx.shadowBlur = 2.5 * dpr;
-    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.fillStyle = '#000';
     if (g.kind === 'balloon') {
       ctx.beginPath();
       ctx.arc(BOX / 2, BOX / 2 - 3, 22, 0, Math.PI * 2);
@@ -990,13 +830,13 @@ export function rotorSprite(id, px, dpr) {
     const ctx = c.getContext('2d');
     const r = size / 2 - 1;
     ctx.translate(size / 2, size / 2);
-    // The disc swept by the blades: a faint glassy tint with a light rim and a dark edge, so it
+    // The disc swept by the blades: a faint tint with a fine light rim and a dark edge, so it
     // reads on dark and light maps alike.
     const disc = ctx.createRadialGradient(0, 0, r * 0.2, 0, 0, r);
-    disc.addColorStop(0, 'rgba(255,255,255,0.04)');
-    disc.addColorStop(0.8, 'rgba(255,255,255,0.09)');
-    disc.addColorStop(0.95, 'rgba(255,255,255,0.22)');
-    disc.addColorStop(0.985, 'rgba(10,14,20,0.35)');
+    disc.addColorStop(0, 'rgba(255,255,255,0.03)');
+    disc.addColorStop(0.86, 'rgba(255,255,255,0.07)');
+    disc.addColorStop(0.96, 'rgba(255,255,255,0.18)');
+    disc.addColorStop(0.985, 'rgba(10,14,20,0.24)');
     disc.addColorStop(1, 'rgba(10,14,20,0)');
     ctx.fillStyle = disc;
     ctx.beginPath();
@@ -1008,9 +848,9 @@ export function rotorSprite(id, px, dpr) {
       const trail = ctx.createConicGradient(0, 0, 0);
       for (let i = 0; i < n; i++) {
         const a = i / n;
-        trail.addColorStop(a, 'rgba(225,230,236,0.42)');
-        trail.addColorStop(a + 0.3 / n, 'rgba(225,230,236,0)');
-        trail.addColorStop(a + 0.999 / n, 'rgba(225,230,236,0)');
+        trail.addColorStop(a, 'rgba(228,232,238,0.3)');
+        trail.addColorStop(a + 0.28 / n, 'rgba(228,232,238,0)');
+        trail.addColorStop(a + 0.999 / n, 'rgba(228,232,238,0)');
       }
       ctx.fillStyle = trail;
       ctx.beginPath();
@@ -1018,18 +858,15 @@ export function rotorSprite(id, px, dpr) {
       ctx.fill();
     }
     ctx.lineCap = 'round';
-    const bw = Math.max(1.2 * dpr, r * 0.07);
+    const bw = Math.max(1.1 * dpr, r * 0.06);
+    ctx.strokeStyle = 'rgba(16,20,26,0.8)';
+    ctx.lineWidth = bw;
     for (let i = 0; i < n; i++) {
       const a = (i / n) * Math.PI * 2;
       const [cx, cy] = [Math.cos(a), Math.sin(a)];
       ctx.beginPath();
       ctx.moveTo(cx * r * 0.08, cy * r * 0.08);
-      ctx.lineTo(cx * r * 0.96, cy * r * 0.96);
-      ctx.strokeStyle = 'rgba(12,16,22,0.9)';
-      ctx.lineWidth = bw;
-      ctx.stroke();
-      ctx.strokeStyle = 'rgba(255,255,255,0.35)';
-      ctx.lineWidth = bw * 0.35;
+      ctx.lineTo(cx * r * 0.95, cy * r * 0.95);
       ctx.stroke();
     }
     return c;
@@ -1044,7 +881,6 @@ export function svgIcon(id, fill = CLASSIC_FILL) {
   const add = (list) => list && list.forEach((pts) => pts && parts.push(d(pts)));
   if (g.kind === 'balloon') return `<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="29" r="22" fill="${fill}"/></svg>`;
   if (g.kind === 'ground') return `<svg viewBox="0 0 64 64" aria-hidden="true"><rect x="21" y="9" width="22" height="46" rx="5" fill="${fill}"/></svg>`;
-  add(g.tracks);
   add((g.fans || []).map((n) => n.pts));
   add(g.wings);
   add(g.ht);
