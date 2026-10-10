@@ -10,7 +10,7 @@ import { svgIcon, shapeFor, CLASSIC_FILL } from './icons.js?v=14';
 import { shortAlt } from './format.js?v=2';
 import { distanceNm, normalizeLon } from './shared/geo.js';
 import { PROVIDERS } from './shared/providers.js';
-import { vectorStyle, airportBadge, LAND } from './map-style.js?v=2';
+import { vectorStyle, styleImage, LAND } from './map-style.js?v=3';
 import { WeatherOverlay, currentWeather, describeWeather, weatherIcon, windArrow } from './weather.js?v=1';
 
 const L = window.L;
@@ -162,14 +162,14 @@ async function showVectorMap(theme) {
   });
   glLayer.addTo(map);
   const gl = glLayer.getMaplibreMap();
+  // Airport badges and road signs are drawn when the map first needs them.
   gl.on('styleimagemissing', (e) => {
-    const m = /^airport-badge-(light|dark|satellite)$/.exec(e.id);
-    if (!m || gl.hasImage(e.id)) return;
-    const badge = airportBadge(m[1]);
-    gl.addImage(e.id, badge.image, { pixelRatio: badge.pixelRatio });
+    const img = !gl.hasImage(e.id) && styleImage(e.id);
+    if (img) gl.addImage(e.id, img.image, img.options);
   });
   // Vector tiles that cannot be reached (the tile index fails, tiles keep failing, or nothing has
-  // arrived after a while) mean the server is down or blocked: use the raster tiles instead.
+  // arrived after a while) mean the server is down or blocked: use the raster tiles instead. The
+  // terrain shading and the satellite pictures come from elsewhere; the map works without them.
   let loaded = 0;
   let errors = 0;
   const fallBack = () => {
@@ -178,9 +178,10 @@ async function showVectorMap(theme) {
     applyMapStyle();
   };
   gl.on('sourcedata', (e) => {
-    if (e.tile) loaded++;
+    if (e.tile && e.sourceId === 'omt') loaded++;
   });
   gl.on('error', (e) => {
+    if (e.sourceId && e.sourceId !== 'omt') return;
     if ((e.sourceId && !e.tile) || ++errors >= 4) fallBack();
   });
   setTimeout(fallBack, 15000);
