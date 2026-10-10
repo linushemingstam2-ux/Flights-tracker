@@ -1,4 +1,5 @@
-// The flight details side panel (bottom sheet on phones).
+// The selected flight: a bottom card on phones (tap or swipe up for everything, swipe down to
+// close), a side panel on wider screens.
 
 import { distanceNm } from './shared/geo.js';
 import { flagEmoji } from './shared/countries.js';
@@ -23,13 +24,61 @@ function setText(id, text) {
 }
 
 export class Panel {
-  constructor({ onClose, onFollow, onZoom }) {
+  constructor({ onClose, onFollow, onZoom, onResize = () => {} }) {
     this.el = $('panel');
     this.hex = null;
     this.route = null;
+    this.note = ''; // subtitle override, e.g. for demo aircraft
+    this.onClose = onClose;
+    this.onResize = onResize;
     $('p-close').addEventListener('click', onClose);
     $('p-follow').addEventListener('click', onFollow);
     $('p-zoom').addEventListener('click', onZoom);
+    this._bindGestures();
+  }
+
+  get expanded() {
+    return this.el.classList.contains('expanded');
+  }
+
+  setExpanded(on) {
+    this.el.classList.toggle('expanded', on);
+    $('p-handle').setAttribute('aria-expanded', String(on));
+    $('p-handle').setAttribute('aria-label', on ? 'Show less' : 'Show more details');
+    if (!on) this.el.querySelector('.flight-body').scrollTop = 0;
+    this.onResize();
+  }
+
+  // Tap the grip or header to expand/collapse; swipe up to expand, down to collapse or close.
+  _bindGestures() {
+    let start = null;
+    const down = (e) => {
+      if (e.target.closest('button:not(#p-handle), a')) return;
+      start = { y: e.clientY, t: Date.now() };
+      // Keep receiving the pointer after it leaves the header, so the release is seen here.
+      e.currentTarget.setPointerCapture?.(e.pointerId);
+    };
+    const up = (e) => {
+      if (!start) return;
+      const dy = e.clientY - start.y;
+      start = null;
+      if (Math.abs(dy) < 10) this.setExpanded(!this.expanded);
+      else if (dy < 0) this.setExpanded(true);
+      else if (this.expanded) this.setExpanded(false);
+      else this.onClose();
+    };
+    for (const el of [$('p-handle'), this.el.querySelector('.flight-head')]) {
+      el.addEventListener('pointerdown', down);
+      el.addEventListener('pointerup', up);
+      el.addEventListener('pointercancel', () => (start = null));
+    }
+    // Keyboard users: the grip is a button.
+    $('p-handle').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        this.setExpanded(!this.expanded);
+      }
+    });
   }
 
   get open() {
@@ -41,13 +90,15 @@ export class Panel {
     this.hex = ac.hex;
     this.route = null;
     this.el.hidden = false;
+    this.setExpanded(false);
     document.body.classList.add('panel-open');
     $('p-icon').innerHTML = svgIcon(shapeFor(ac));
     $('p-route').hidden = true;
     $('p-route-warning').hidden = true;
     $('p-photo-wrap').hidden = true;
     $('p-photo').removeAttribute('src');
-    setText('p-airline', demo ? 'Simulated aircraft (demo mode)' : '');
+    this.note = demo ? 'Simulated aircraft (demo mode)' : '';
+    this.airline = '';
     setText('p-owner', '—');
     const link = $('p-external');
     link.hidden = demo || ac.hex.startsWith('~');
@@ -68,6 +119,7 @@ export class Panel {
 
   setRoute(route) {
     this.route = route;
+    this.airline = route?.airline?.name || '';
     $('p-route').hidden = !route;
     if (!route) return;
     const { origin: o, destination: d } = route;
@@ -77,7 +129,6 @@ export class Panel {
     setText('p-dest-code', d.iata || d.icao);
     setText('p-dest-city', d.city || d.name);
     $('p-dest-code').title = d.name;
-    if (route.airline?.name) setText('p-airline', route.airline.name);
   }
 
   setDetails({ info, photo }) {
@@ -101,6 +152,8 @@ export class Panel {
   /** Refresh the live values. `pos` is the current display position. */
   update(ac, pos, { metric, now }) {
     setText('p-callsign', ac.callsign || ac.reg || ac.hex.toUpperCase());
+    setText('p-airline', this.note || this.airline || ac.desc || ac.operator || (ac.reg && ac.callsign ? ac.reg : ''));
+    setText('p-chip', ac.type);
     setText('p-type', ac.desc || ac.type || 'Unknown type');
     setText('p-alt', formatAlt(ac, metric));
     setText('p-vrate', ac.onGround ? '—' : formatVRate(ac.vrate, metric));

@@ -5,48 +5,38 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Tracker · Live Flight Radar</title>
     <meta name="description" content="Live flight radar: aircraft around the world in real time, from free public ADS-B networks." />
-    <meta name="theme-color" content="#0b111a" />
+    <meta name="theme-color" content="#0e1420" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Tracker" />
     <!-- Optional: URL of a hosted Tracker server (e.g. on Vercel) for copies of this page without one. -->
     <meta name="tracker-api" content="" />
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="favicon.svg" />
     <link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
-    <link rel="stylesheet" href="css/app.css?v=6" />
+    <link rel="stylesheet" href="css/app.css?v=7" />
   </head>
   <body>
-    <header class="topbar">
-      <a class="brand" href="./" aria-label="Tracker – live flight radar">
-        <svg viewBox="0 0 32 32" aria-hidden="true"><path fill="currentColor" d="M16 1C17 1 17.6 2.4 17.6 4L17.6 11 30 18.5 30 20.5 17.6 16.5 17.4 25 21.5 28.2 21.5 29.8 16.6 28.6 16 30.5 15.4 28.6 10.5 29.8 10.5 28.2 14.6 25 14.4 16.5 2 20.5 2 18.5 14.4 11 14.4 4C14.4 2.4 15 1 16 1Z" transform="rotate(45 16 16)"/></svg>
-        <span class="brand-name">Tracker</span>
-        <span class="brand-tag">Live flight radar</span>
-      </a>
+    <main id="map" aria-label="Map of live air traffic"></main>
 
+    <!-- Top: search, status and notices float over the map -->
+    <div class="top-ui">
       <div class="search" role="search">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.5 3a7.5 7.5 0 0 1 5.96 12.06l4.24 4.24-1.4 1.4-4.24-4.24A7.5 7.5 0 1 1 10.5 3Zm0 2a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11Z" fill="currentColor"/></svg>
-        <input id="search" type="search" placeholder="Search flight, registration or hex" autocomplete="off" spellcheck="false" aria-label="Search flights" aria-controls="search-results" aria-autocomplete="list" />
-        <kbd class="search-hint" aria-hidden="true">/</kbd>
+        <a class="brand" href="./" aria-label="Tracker – live flight radar">
+          <svg viewBox="0 0 32 32" aria-hidden="true"><path fill="currentColor" d="M16 1C17 1 17.6 2.4 17.6 4L17.6 11 30 18.5 30 20.5 17.6 16.5 17.4 25 21.5 28.2 21.5 29.8 16.6 28.6 16 30.5 15.4 28.6 10.5 29.8 10.5 28.2 14.6 25 14.4 16.5 2 20.5 2 18.5 14.4 11 14.4 4C14.4 2.4 15 1 16 1Z" transform="rotate(45 16 16)"/></svg>
+        </a>
+        <input id="search" type="search" placeholder="Search flights and aircraft" autocomplete="off" spellcheck="false" enterkeyhint="search" aria-label="Search flights" aria-controls="search-results" aria-autocomplete="list" />
+        <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.5 3a7.5 7.5 0 0 1 5.96 12.06l4.24 4.24-1.4 1.4-4.24-4.24A7.5 7.5 0 1 1 10.5 3Zm0 2a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11Z" fill="currentColor"/></svg>
         <ul id="search-results" class="search-results" role="listbox" hidden></ul>
       </div>
 
-      <nav class="tools" aria-label="Map tools">
-        <button id="btn-locate" class="tool" type="button" title="Go to my location">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M11 1h2v3.06A8 8 0 0 1 19.94 11H23v2h-3.06A8 8 0 0 1 13 19.94V23h-2v-3.06A8 8 0 0 1 4.06 13H1v-2h3.06A8 8 0 0 1 11 4.06V1Zm1 5a6 6 0 1 0 0 12 6 6 0 0 0 0-12Zm0 3a3 3 0 1 1 0 6 3 3 0 0 1 0-6Z"/></svg>
-          <span class="tool-label">Locate</span>
-        </button>
-        <button id="btn-filters" class="tool" type="button" aria-expanded="false" aria-controls="filters">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 5h18v2l-7 7v6l-4-2v-4L3 7V5Z"/></svg>
-          <span class="tool-label">Filters</span>
-          <i id="filter-badge" class="badge" hidden></i>
-        </button>
-        <button id="btn-settings" class="tool" type="button" aria-expanded="false" aria-controls="settings">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M10.3 2h3.4l.5 2.6c.6.2 1.2.5 1.7.9l2.5-.9 1.7 2.9-2 1.8a7 7 0 0 1 0 1.9l2 1.7-1.7 3-2.5-.9c-.5.4-1.1.7-1.7.9l-.5 2.6h-3.4l-.5-2.6a7 7 0 0 1-1.7-.9l-2.5.9-1.7-3 2-1.7a7 7 0 0 1 0-1.9l-2-1.8L5.6 4.6l2.5.9c.5-.4 1.1-.7 1.7-.9L10.3 2ZM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z"/></svg>
-          <span class="tool-label">Settings</span>
-        </button>
-      </nav>
-    </header>
+      <div class="notes">
+      <div id="status" class="status" aria-live="polite">
+        <span id="status-dot" class="dot"></span>
+        <span id="status-text">Connecting…</span>
+        <span id="status-source" class="status-source"></span>
+      </div>
 
-    <main id="map" aria-label="Map of live air traffic"></main>
-
-    <div class="top-stack">
       <div id="demo-badge" class="demo-badge" hidden>
         <strong>DEMO</strong> Simulated traffic, not real flights
         <button id="demo-exit" type="button">Go live</button>
@@ -60,12 +50,7 @@
         </span>
       </div>
       <div id="notice" class="notice" hidden></div>
-    </div>
-
-    <div id="status" class="status" aria-live="polite">
-      <span id="status-dot" class="dot"></span>
-      <span id="status-text">Connecting…</span>
-      <span id="status-source" class="status-source"></span>
+      </div>
     </div>
 
     <div id="legend" class="legend" hidden aria-label="Altitude colours">
@@ -80,10 +65,54 @@
     </div>
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-    <section id="filters" class="popover" hidden aria-label="Filters">
+    <!-- Bottom tab bar -->
+    <nav class="tabbar" aria-label="Map tools">
+      <button id="btn-layers" class="tab" type="button" data-sheet="layers" aria-expanded="false" aria-controls="layers">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m12 2 10 5.5-10 5.5L2 7.5 12 2Zm-7.8 9.2L12 15.5l7.8-4.3L22 12.4l-10 5.5-10-5.5 2.2-1.2Zm0 4.5L12 20l7.8-4.3L22 17l-10 5.5L2 17l2.2-1.3Z"/></svg>
+        <span>Map</span>
+      </button>
+      <button id="btn-filters" class="tab" type="button" data-sheet="filters" aria-expanded="false" aria-controls="filters">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 5h18v2l-7 7v6l-4-2v-4L3 7V5Z"/></svg>
+        <span>Filters</span>
+        <i id="filter-badge" class="badge" hidden></i>
+      </button>
+      <button id="btn-locate" class="tab" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M11 1h2v3.06A8 8 0 0 1 19.94 11H23v2h-3.06A8 8 0 0 1 13 19.94V23h-2v-3.06A8 8 0 0 1 4.06 13H1v-2h3.06A8 8 0 0 1 11 4.06V1Zm1 5a6 6 0 1 0 0 12 6 6 0 0 0 0-12Zm0 3a3 3 0 1 1 0 6 3 3 0 0 1 0-6Z"/></svg>
+        <span>Nearby</span>
+      </button>
+      <button id="btn-settings" class="tab" type="button" data-sheet="settings" aria-expanded="false" aria-controls="settings">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M10.3 2h3.4l.5 2.6c.6.2 1.2.5 1.7.9l2.5-.9 1.7 2.9-2 1.8a7 7 0 0 1 0 1.9l2 1.7-1.7 3-2.5-.9c-.5.4-1.1.7-1.7.9l-.5 2.6h-3.4l-.5-2.6a7 7 0 0 1-1.7-.9l-2.5.9-1.7-3 2-1.7a7 7 0 0 1 0-1.9l-2-1.8L5.6 4.6l2.5.9c.5-.4 1.1-.7 1.7-.9L10.3 2ZM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z"/></svg>
+        <span>Settings</span>
+      </button>
+    </nav>
+
+    <!-- Slide-up sheets -->
+    <div id="sheet-backdrop" class="backdrop" hidden></div>
+
+    <section id="layers" class="sheet" hidden aria-label="Map">
+      <div class="sheet-grip" aria-hidden="true"><span></span></div>
+      <h2>Map</h2>
+      <div id="s-map" class="style-cards" role="radiogroup" aria-label="Map style">
+        <button type="button" role="radio" data-value="dark" aria-checked="false"><i class="swatch swatch-dark"></i>Dark</button>
+        <button type="button" role="radio" data-value="light" aria-checked="false"><i class="swatch swatch-light"></i>Light</button>
+        <button type="button" role="radio" data-value="satellite" aria-checked="false"><i class="swatch swatch-satellite"></i>Satellite</button>
+      </div>
+      <div class="field">
+        <span>Aircraft colours</span>
+        <div id="s-color" class="segmented" role="radiogroup" aria-label="Aircraft colours">
+          <button type="button" role="radio" data-value="classic" aria-checked="false">Classic</button>
+          <button type="button" role="radio" data-value="altitude" aria-checked="false">By altitude</button>
+        </div>
+      </div>
+      <label class="toggle"><span>Callsign labels</span><input id="s-labels" type="checkbox" /></label>
+      <label class="toggle"><span>Trails for all aircraft</span><input id="s-trails" type="checkbox" /></label>
+    </section>
+
+    <section id="filters" class="sheet" hidden aria-label="Filters">
+      <div class="sheet-grip" aria-hidden="true"><span></span></div>
       <h2>Filters</h2>
       <label class="field">
-        <span>Callsign, type, registration or operator</span>
+        <span>Callsign, airline, type or registration</span>
         <input id="f-text" type="text" placeholder="e.g. BAW, A38*, B77W" autocomplete="off" spellcheck="false" />
       </label>
       <div class="field">
@@ -91,28 +120,14 @@
         <label class="range"><span>Min</span><input id="f-alt-min" type="range" min="0" max="60000" step="1000" /></label>
         <label class="range"><span>Max</span><input id="f-alt-max" type="range" min="0" max="60000" step="1000" /></label>
       </div>
-      <label class="check"><input id="f-ground" type="checkbox" /> Hide aircraft on the ground</label>
-      <label class="check"><input id="f-military" type="checkbox" /> Military aircraft only</label>
-      <button id="f-reset" class="btn-secondary" type="button">Reset filters</button>
+      <label class="toggle"><span>Hide aircraft on the ground</span><input id="f-ground" type="checkbox" /></label>
+      <label class="toggle"><span>Military aircraft only</span><input id="f-military" type="checkbox" /></label>
+      <button id="f-reset" class="btn-secondary wide" type="button">Reset filters</button>
     </section>
 
-    <section id="settings" class="popover" hidden aria-label="Settings">
+    <section id="settings" class="sheet" hidden aria-label="Settings">
+      <div class="sheet-grip" aria-hidden="true"><span></span></div>
       <h2>Settings</h2>
-      <label class="field">
-        <span>Map</span>
-        <select id="s-map">
-          <option value="dark">Dark</option>
-          <option value="light">Light</option>
-          <option value="satellite">Satellite</option>
-        </select>
-      </label>
-      <label class="field">
-        <span>Aircraft colours</span>
-        <select id="s-color">
-          <option value="classic">Classic yellow</option>
-          <option value="altitude">By altitude</option>
-        </select>
-      </label>
       <label class="field">
         <span>Data source</span>
         <select id="s-source">
@@ -122,10 +137,8 @@
           <option value="opensky">OpenSky Network</option>
         </select>
       </label>
-      <label class="check"><input id="s-labels" type="checkbox" /> Show callsign labels</label>
-      <label class="check"><input id="s-trails" type="checkbox" /> Show trails for all aircraft</label>
-      <label class="check"><input id="s-metric" type="checkbox" /> Metric units (m, km/h)</label>
-      <label class="check"><input id="s-demo" type="checkbox" /> Demo mode (simulated traffic)</label>
+      <label class="toggle"><span>Metric units (m, km/h)</span><input id="s-metric" type="checkbox" /></label>
+      <label class="toggle"><span>Demo mode (simulated traffic)</span><input id="s-demo" type="checkbox" /></label>
       <p class="about">
         Live positions come from community ADS-B networks
         (<a href="https://adsb.lol" target="_blank" rel="noopener">adsb.lol</a>,
@@ -138,19 +151,22 @@
       <p class="about keys">Keys: <kbd>/</kbd> search · <kbd>F</kbd> follow · <kbd>Esc</kbd> close</p>
     </section>
 
-    <aside id="panel" class="panel" hidden aria-label="Flight details">
-      <div class="panel-head">
-        <div id="p-icon" class="panel-icon"></div>
-        <div class="panel-title">
+    <!-- Selected flight: bottom card on phones (swipe up for more), side panel on wider screens -->
+    <aside id="panel" class="flight" hidden aria-label="Flight details">
+      <button id="p-handle" class="sheet-grip" type="button" aria-label="Show more details" aria-expanded="false"><span></span></button>
+      <div class="flight-head">
+        <div id="p-icon" class="flight-icon"></div>
+        <div class="flight-title">
           <h2 id="p-callsign">—</h2>
-          <div id="p-airline" class="panel-sub"></div>
+          <div id="p-airline" class="flight-sub"></div>
         </div>
+        <span id="p-chip" class="chip"></span>
         <button id="p-close" class="icon-btn" type="button" aria-label="Close details">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m6.4 5 5.6 5.6L17.6 5 19 6.4 13.4 12l5.6 5.6-1.4 1.4-5.6-5.6L6.4 19 5 17.6l5.6-5.6L5 6.4 6.4 5Z"/></svg>
         </button>
       </div>
 
-      <div class="panel-body">
+      <div class="flight-body">
         <figure id="p-photo-wrap" class="photo" hidden>
           <img id="p-photo" alt="" referrerpolicy="no-referrer" />
           <figcaption id="p-photo-credit"></figcaption>
@@ -162,6 +178,7 @@
               <div id="p-orig-code" class="ap-code"></div>
               <div id="p-orig-city" class="ap-city"></div>
             </div>
+            <svg class="route-plane" viewBox="0 0 32 32" aria-hidden="true"><path fill="currentColor" d="M16 1C17 1 17.6 2.4 17.6 4L17.6 11 30 18.5 30 20.5 17.6 16.5 17.4 25 21.5 28.2 21.5 29.8 16.6 28.6 16 30.5 15.4 28.6 10.5 29.8 10.5 28.2 14.6 25 14.4 16.5 2 20.5 2 18.5 14.4 11 14.4 4C14.4 2.4 15 1 16 1Z" transform="rotate(90 16 16)"/></svg>
             <div class="airport right">
               <div id="p-dest-code" class="ap-code"></div>
               <div id="p-dest-city" class="ap-city"></div>
@@ -169,35 +186,36 @@
           </div>
           <div class="progress">
             <div id="p-progress" class="progress-bar"></div>
-            <div id="p-progress-plane" class="progress-plane">✈</div>
+            <div id="p-progress-plane" class="progress-dot"></div>
           </div>
           <div class="route-dist"><span id="p-flown"></span><span id="p-left"></span></div>
           <p id="p-route-warning" class="route-warning" hidden>Route data may be out of date for this flight.</p>
         </section>
 
-        <div id="p-type" class="panel-type"></div>
-
         <dl class="stats">
           <div><dt>Altitude</dt><dd id="p-alt">—</dd></div>
-          <div><dt>Vertical speed</dt><dd id="p-vrate">—</dd></div>
-          <div><dt>Ground speed</dt><dd id="p-speed">—</dd></div>
+          <div><dt>Speed</dt><dd id="p-speed">—</dd></div>
+          <div><dt>Vertical</dt><dd id="p-vrate">—</dd></div>
           <div><dt>Track</dt><dd id="p-track">—</dd></div>
         </dl>
 
-        <dl class="info">
-          <div><dt>Registration</dt><dd id="p-reg">—</dd></div>
-          <div><dt>Aircraft type</dt><dd id="p-typecode">—</dd></div>
-          <div><dt>ICAO hex</dt><dd id="p-hex">—</dd></div>
-          <div><dt>Squawk</dt><dd id="p-squawk">—</dd></div>
-          <div><dt>Country</dt><dd id="p-country">—</dd></div>
-          <div><dt>Operator</dt><dd id="p-owner">—</dd></div>
-          <div><dt>Data</dt><dd id="p-source">—</dd></div>
-          <div><dt>Last position</dt><dd id="p-seen">—</dd></div>
-          <div class="wide"><dt>Position</dt><dd id="p-pos">—</dd></div>
-        </dl>
+        <div class="flight-more">
+          <div id="p-type" class="flight-type"></div>
+          <dl class="info">
+            <div><dt>Registration</dt><dd id="p-reg">—</dd></div>
+            <div><dt>Aircraft type</dt><dd id="p-typecode">—</dd></div>
+            <div><dt>ICAO hex</dt><dd id="p-hex">—</dd></div>
+            <div><dt>Squawk</dt><dd id="p-squawk">—</dd></div>
+            <div><dt>Country</dt><dd id="p-country">—</dd></div>
+            <div><dt>Operator</dt><dd id="p-owner">—</dd></div>
+            <div><dt>Data</dt><dd id="p-source">—</dd></div>
+            <div><dt>Last position</dt><dd id="p-seen">—</dd></div>
+            <div class="wide"><dt>Position</dt><dd id="p-pos">—</dd></div>
+          </dl>
+        </div>
       </div>
 
-      <div class="panel-actions">
+      <div class="flight-actions">
         <button id="p-follow" class="btn" type="button" aria-pressed="false">Follow</button>
         <button id="p-zoom" class="btn-secondary" type="button">Zoom to</button>
         <a id="p-external" class="btn-secondary" target="_blank" rel="noopener">History ↗</a>
@@ -205,6 +223,6 @@
     </aside>
 
     <script src="vendor/leaflet/leaflet.js"></script>
-    <script type="module" src="js/main.js?v=6"></script>
+    <script type="module" src="js/main.js?v=7"></script>
   </body>
 </html>
