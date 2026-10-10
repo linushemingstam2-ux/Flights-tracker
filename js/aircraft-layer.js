@@ -20,10 +20,42 @@ import { isEmergency, shortAlt } from './format.js';
 
 const L = window.L;
 
+// Colours for what is drawn over the map, to suit the dark or light appearance.
+const INK = {
+  dark: {
+    ring: 'rgba(255, 255, 255, 0.85)',
+    ringFill: 'rgba(255, 255, 255, 0.16)',
+    route: 'rgba(255, 255, 255, 0.55)',
+    dot: '#0d1520',
+    dotEdge: '#ffffff',
+    text: '#ffffff',
+    halo: 'rgba(8, 12, 18, 0.9)',
+    tag: 'rgba(12, 17, 27, 0.8)',
+    tagEdge: null,
+    tagText: '#ffffff',
+    tagSub: '#a9b6c6',
+    coverage: 'rgba(255, 199, 44, 0.45)',
+  },
+  light: {
+    ring: 'rgba(15, 23, 42, 0.6)',
+    ringFill: 'rgba(15, 23, 42, 0.07)',
+    route: 'rgba(15, 23, 42, 0.5)',
+    dot: '#ffffff',
+    dotEdge: '#0f172a',
+    text: '#0f172a',
+    halo: 'rgba(255, 255, 255, 0.95)',
+    tag: 'rgba(255, 255, 255, 0.94)',
+    tagEdge: 'rgba(15, 23, 42, 0.14)',
+    tagText: '#0f172a',
+    tagSub: '#5b6b80',
+    coverage: 'rgba(190, 132, 0, 0.6)',
+  },
+};
+
 export const AircraftLayer = L.Layer.extend({
   initialize(store, getOptions) {
     this.store = store;
-    this.getOptions = getOptions; // () => { labels, allTrails, filter, route, coverage }
+    this.getOptions = getOptions; // () => { theme, labels, allTrails, filter, route, coverage }
     this._hits = [];
     this._frame = this._frame.bind(this);
     this.visibleCount = 0;
@@ -115,6 +147,7 @@ export const AircraftLayer = L.Layer.extend({
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     const o = this.getOptions();
+    this._ink = INK[o.theme] || INK.dark;
     const store = this.store;
     const zoom = this._zoom;
     const iconPx = zoom >= 9 ? 32 : zoom >= 7 ? 28 : zoom >= 5 ? 24 : 20;
@@ -233,9 +266,9 @@ export const AircraftLayer = L.Layer.extend({
     if (isSelected) {
       ctx.beginPath();
       ctx.arc(x, y, px * 0.72, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.16)';
+      ctx.fillStyle = this._ink.ringFill;
       ctx.fill();
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+      ctx.strokeStyle = this._ink.ring;
       ctx.lineWidth = 1.5;
       ctx.stroke();
     }
@@ -284,7 +317,7 @@ export const AircraftLayer = L.Layer.extend({
     ctx.save();
     ctx.setLineDash([6, 6]);
     ctx.lineWidth = 1.5;
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
+    ctx.strokeStyle = this._ink.route;
     ctx.beginPath();
     pts.forEach(([la, lo], i) => {
       const p = project(la, lo);
@@ -297,17 +330,17 @@ export const AircraftLayer = L.Layer.extend({
       const p = project(ap.lat, ap.lon);
       ctx.beginPath();
       ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
-      ctx.fillStyle = '#0d1520';
+      ctx.fillStyle = this._ink.dot;
       ctx.fill();
       ctx.lineWidth = 2;
-      ctx.strokeStyle = '#ffffff';
+      ctx.strokeStyle = this._ink.dotEdge;
       ctx.stroke();
       ctx.font = '700 11px system-ui, sans-serif';
       ctx.textBaseline = 'middle';
       ctx.lineWidth = 3;
-      ctx.strokeStyle = 'rgba(8, 12, 18, 0.9)';
+      ctx.strokeStyle = this._ink.halo;
       ctx.strokeText(ap.iata || ap.icao, p.x + 9, p.y);
-      ctx.fillStyle = '#ffffff';
+      ctx.fillStyle = this._ink.text;
       ctx.fillText(ap.iata || ap.icao, p.x + 9, p.y);
     }
     ctx.restore();
@@ -323,13 +356,14 @@ export const AircraftLayer = L.Layer.extend({
     ctx.beginPath();
     ctx.arc(c.x, c.y, r, 0, Math.PI * 2);
     ctx.setLineDash([4, 8]);
-    ctx.strokeStyle = 'rgba(255, 199, 44, 0.45)';
+    ctx.strokeStyle = this._ink.coverage;
     ctx.lineWidth = 1.5;
     ctx.stroke();
     ctx.restore();
   },
 
   _drawLabels(ctx, hits, selected, o, zoom, iconPx) {
+    const ink = this._ink;
     const detailed = zoom >= 9;
     const CELL = 6; // px; labels claim the grid cells their box covers so they never overlap
     const used = new Set();
@@ -371,14 +405,19 @@ export const AircraftLayer = L.Layer.extend({
       ctx.beginPath();
       if (ctx.roundRect) ctx.roundRect(bx, by, bw, bh, 4);
       else ctx.rect(bx, by, bw, bh);
-      ctx.fillStyle = isSelected ? 'rgba(255, 77, 58, 0.92)' : 'rgba(12, 17, 27, 0.8)';
+      ctx.fillStyle = isSelected ? 'rgba(255, 77, 58, 0.92)' : ink.tag;
       ctx.fill();
+      if (ink.tagEdge && !isSelected) {
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = ink.tagEdge;
+        ctx.stroke();
+      }
       ctx.font = '700 11px system-ui, sans-serif';
-      ctx.fillStyle = '#ffffff';
+      ctx.fillStyle = isSelected ? '#ffffff' : ink.tagText;
       ctx.fillText(text, bx + 5, by + 3);
       if (sub) {
         ctx.font = '500 10px system-ui, sans-serif';
-        ctx.fillStyle = isSelected ? '#ffe3de' : '#a9b6c6';
+        ctx.fillStyle = isSelected ? '#ffe3de' : ink.tagSub;
         ctx.fillText(sub, bx + 5, by + 16);
       }
     }
