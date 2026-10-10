@@ -14,7 +14,7 @@
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="favicon.svg" />
     <link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
-    <link rel="stylesheet" href="css/app.css?v=8" />
+    <link rel="stylesheet" href="css/app.css?v=9" />
   </head>
   <body>
     <main id="map" aria-label="Map of live air traffic"></main>
@@ -101,7 +101,8 @@
         <span>Aircraft colours</span>
         <div id="s-color" class="segmented" role="radiogroup" aria-label="Aircraft colours">
           <button type="button" role="radio" data-value="classic" aria-checked="false">Classic</button>
-          <button type="button" role="radio" data-value="altitude" aria-checked="false">By altitude</button>
+          <button type="button" role="radio" data-value="realistic" aria-checked="false">Realistic</button>
+          <button type="button" role="radio" data-value="altitude" aria-checked="false">Altitude</button>
         </div>
       </div>
       <label class="toggle"><span>Callsign labels</span><input id="s-labels" type="checkbox" /></label>
@@ -223,6 +224,6 @@
     </aside>
 
     <script src="vendor/leaflet/leaflet.js"></script>
-    <script type="module" src="js/main.js?v=8"></script>
+    <script type="module" src="js/main.js?v=9"></script>
   </body>
 </html>

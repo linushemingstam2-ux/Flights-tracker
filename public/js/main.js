@@ -1,12 +1,12 @@
 // Flight radar app: map, live polling, selection, search, filters and settings.
 
 import { AircraftStore } from './store.js';
-import { AircraftLayer } from './aircraft-layer.js?v=8';
-import { Panel } from './panel.js?v=8';
+import { AircraftLayer } from './aircraft-layer.js?v=9';
+import { Panel } from './panel.js?v=9';
 import { createDataSource } from './datasource.js?v=7';
 import { SimSource } from './sim.js';
 import { loadSettings, saveSettings, makeFilter, DEFAULTS } from './settings.js';
-import { svgIcon, shapeFor, altitudeHue, CLASSIC_FILL } from './icons.js?v=8';
+import { svgIcon, shapeFor, altitudeHue, CLASSIC_FILL } from './icons.js?v=9';
 import { formatAlt, formatSpeed, shortAlt, formatAgo } from './format.js';
 import { distanceNm, normalizeLon } from './shared/geo.js';
 import { PROVIDERS } from './shared/providers.js';
