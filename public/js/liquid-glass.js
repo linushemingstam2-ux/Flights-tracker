@@ -124,14 +124,14 @@ void main() {
   float t = clamp(inside / u_bezel, 0.0, 1.0); // 0 on the rim, 1 where the glass is flat
   float rim = 1.0 - t;
 
-  // Light through the curved rim bends inwards, so the edge shows what lies further in; the flat
-  // middle magnifies slightly, like a thick lens.
-  vec2 look = halfSize + c * 0.97;
-  vec2 bend = -n * u_refract * rim * rim;
+  // Light through the curved rim bends inwards, so the very edge shows what lies a little further
+  // in; the flat middle magnifies only faintly.
+  vec2 look = halfSize + c * 0.99;
+  vec2 bend = -n * u_refract * pow(rim, 2.5);
   vec3 sharp = vec3(
-    texture(u_scene, sceneUv(look + bend * 0.96)).r,
+    texture(u_scene, sceneUv(look + bend * 0.97)).r,
     texture(u_scene, sceneUv(look + bend)).g,
-    texture(u_scene, sceneUv(look + bend * 1.04)).b);
+    texture(u_scene, sceneUv(look + bend * 1.03)).b);
   vec3 frosted = u_frost > 1.5 ? texture(u_frost2, sceneUv(look + bend)).rgb : texture(u_frost1, sceneUv(look + bend)).rgb;
   // Regular glass is lightly frosted in the middle, thick glass fully; the lens rim stays sharp.
   float frost = (u_frost > 1.5 ? 1.0 : u_frost * 0.65) * smoothstep(0.1, 0.9, t);

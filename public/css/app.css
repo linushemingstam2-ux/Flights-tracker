@@ -178,8 +178,8 @@ kbd {
   --lg-tint: var(--lg-tint-regular);
   --lg-frost: 1; /* 0 clear, 1 regular, 2 thick */
   --lg-adapt: 0.3; /* extra tint over scenery that would make content hard to read */
-  --lg-bezel: 15; /* width of the curved rim, px */
-  --lg-refract: 13; /* how far the rim bends the view, px */
+  --lg-bezel: 12; /* width of the curved rim, px */
+  --lg-refract: 5; /* how far the rim bends the view, px: subtle, as in iOS */
   --filter: var(--glass-filter);
   position: relative;
   isolation: isolate;
@@ -226,8 +226,8 @@ kbd {
   --lg-tint: var(--lg-tint-thick);
   --lg-frost: 2;
   --lg-adapt: 0.32;
-  --lg-bezel: 20;
-  --lg-refract: 18;
+  --lg-bezel: 14;
+  --lg-refract: 6;
   --filter: var(--glass-filter-thick);
 }
 
@@ -552,8 +552,8 @@ html.lg-on .glass::after {
 }
 
 .fab {
-  --lg-bezel: 11;
-  --lg-refract: 10;
+  --lg-bezel: 9;
+  --lg-refract: 4;
   --lg-frost: 0.55; /* only an icon on it: a clearer lens */
   --lens-mask: radial-gradient(closest-side, transparent 64%, #000 96%);
   --body-mask: radial-gradient(closest-side, #000 64%, transparent 96%);
