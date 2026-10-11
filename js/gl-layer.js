@@ -1,18 +1,19 @@
 // The vector map (MapLibre GL) as a Leaflet layer, moved the way Leaflet moves its own tiles.
-// While the map is dragged, flung or pinched, the picture already drawn simply moves and scales
-// with it, which the browser does by itself, smoothly, at the screen's full rate. MapLibre draws
-// a new picture only when the edge of the old one comes near (pictures are drawn with a margin
-// all round for this, and further ahead in the direction the map is moving), when a zoom has
-// stretched it too far, and when the map comes to rest. Repaints that MapLibre wants for itself
-// meanwhile (map data arriving) wait for the next of those, or a quarter of a second, so the
-// finger always comes first. A new picture and its new place on screen always arrive together,
-// in the same frame, so the map never jumps, or lags behind the finger and the aircraft over it.
+// Drawing the map is slow on phones (tens of milliseconds in Safari), far too slow to do while a
+// finger moves it. So the map is drawn with a wide margin all round, and while it is dragged,
+// flung or pinched, that picture simply moves and scales with the finger, which the browser does
+// by itself, smoothly, at the screen's full rate. MapLibre draws again during a gesture only if
+// the finger nears the edge of the margin (and then further ahead, in the direction the map is
+// going) or a zoom stretches the picture too far. Everything else waits until the map is still:
+// map data arriving, and centring the picture in its margin again. A new picture and its new
+// place on screen always arrive together, in the same frame, so the map never jumps, or lags
+// behind the finger and the aircraft over it.
 // After the approach of @maplibre/maplibre-gl-leaflet (ISC licence).
 
 const L = window.L;
 
-/** The margin drawn beyond each edge of the screen, in CSS px. */
-const margin = (length) => Math.round(Math.min(320, Math.max(120, length * 0.25)));
+/** The margin drawn beyond each edge of the screen, in CSS px: more than a usual swipe. */
+const margin = (length) => Math.round(Math.min(360, Math.max(160, length * 0.4)));
 
 /** Credits of every source in a style, for Leaflet's credits line. */
 const attributionOf = (style) =>
@@ -46,21 +47,18 @@ export const GLLayer = L.Layer.extend({
     }));
     // Leaflet decides where the map may go; MapLibre shows exactly the same place.
     gl.setTransformConstrain?.((center, zoom) => ({ center, zoom }));
-    // While the map moves, MapLibre's own repaints wait (see _onMove), or for a finger held still,
-    // a moment.
+    // Repaints MapLibre wants for itself (map data arriving) wait while the map moves.
     const repaint = gl.triggerRepaint.bind(gl);
     gl.triggerRepaint = () => {
       if (!this._busy()) return repaint();
       this._wanted = true;
-      this._wait ||= setTimeout(() => {
-        this._wait = 0;
-        if (this._wanted) this._draw();
-      }, 300);
+      if (!this._wait) this._waitForStill();
     };
-    this._wait = 0;
     this._moving = false;
     this._lastMove = 0;
     this._wanted = false;
+    this._wait = 0;
+    this._settle = 0;
     this._velocity = L.point(0, 0);
     this._last = null;
     this._at = null;
@@ -70,7 +68,8 @@ export const GLLayer = L.Layer.extend({
 
   onRemove() {
     clearTimeout(this._wait);
-    this._wait = 0;
+    clearTimeout(this._settle);
+    this._wait = this._settle = 0;
     this._gl.remove();
     this._gl = null;
     L.DomUtil.remove(this._container);
@@ -107,9 +106,22 @@ export const GLLayer = L.Layer.extend({
     this._gl?.setStyle(style);
   },
 
-  /** The map is being moved. (A move that never reported its end is over after a second.) */
+  /**
+   * The map is moving. A finger resting for a moment counts as still, and so does a move that
+   * never reported its end.
+   */
   _busy() {
-    return this._moving && performance.now() - this._lastMove < 1000;
+    return this._moving && performance.now() - this._lastMove < 300;
+  },
+
+  /** Draws what MapLibre asked for once the map is still. */
+  _waitForStill() {
+    this._wait = setTimeout(() => {
+      this._wait = 0;
+      if (!this._wanted || !this._map) return;
+      if (this._busy()) this._waitForStill();
+      else this._draw();
+    }, 300);
   },
 
   _setSize() {
@@ -131,12 +143,14 @@ export const GLLayer = L.Layer.extend({
     const map = this._map;
     const gl = this._gl;
     if (!map || !gl) return;
+    clearTimeout(this._settle);
+    this._settle = 0;
     const zoom = map.getZoom();
-    // Most of the margin goes ahead of a moving map: about a quarter of a second of travel.
+    // During a gesture, half the margin goes ahead of the moving map (about half a second of travel).
     const pad = this._pad;
     const v = this._busy() ? this._velocity : L.point(0, 0);
-    const lead = L.point(Math.max(-0.7, Math.min(0.7, (v.x * 250) / pad.x)) * pad.x, Math.max(-0.7, Math.min(0.7, (v.y * 250) / pad.y)) * pad.y);
-    const topLeft = map.containerPointToLayerPoint([0, 0]).subtract(pad).add(lead).round();
+    const ahead = (speed, room) => Math.max(-0.5, Math.min(0.5, (speed * 500) / room)) * room;
+    const topLeft = map.containerPointToLayerPoint([0, 0]).subtract(pad).add(L.point(ahead(v.x, pad.x), ahead(v.y, pad.y))).round();
     // The picture's top left corner in world pixels at this zoom: where it belongs as the map moves.
     this._at = { zoom, origin: map.getPixelOrigin().add(topLeft), time: performance.now() };
     this._place(topLeft, 1);
@@ -155,6 +169,8 @@ export const GLLayer = L.Layer.extend({
   },
 
   _onMoveStart() {
+    clearTimeout(this._settle);
+    this._settle = 0;
     this._moving = true;
     this._lastMove = performance.now();
     this._last = null;
@@ -171,7 +187,7 @@ export const GLLayer = L.Layer.extend({
     // How fast the view travels (px per ms), smoothed; reset by any zoom.
     const last = this._last;
     if (last && last.zoom === zoom && now > last.time) {
-      const k = Math.min(1, (now - last.time) / 60);
+      const k = Math.min(1, (now - last.time) / 80);
       this._velocity = this._velocity.multiplyBy(1 - k).add(view.subtract(last.view).divideBy(now - last.time).multiplyBy(k));
     } else if (last) {
       this._velocity = L.point(0, 0);
@@ -184,21 +200,27 @@ export const GLLayer = L.Layer.extend({
     const pad = this._pad;
     const right = pos.x + (size.x + 2 * pad.x) * scale - (view.x + size.x);
     const bottom = pos.y + (size.y + 2 * pad.y) * scale - (view.y + size.y);
-    const nearEdge = Math.min(view.x - pos.x, right) < pad.x * 0.3 || Math.min(view.y - pos.y, bottom) < pad.y * 0.3;
-    // A zoom stretches the picture: keep it sharp by drawing again now and then.
-    const age = now - this._at.time;
-    const stretched = scale > 1.3 || scale < 0.8 || (scale !== 1 && age > 150);
-    // Map data that arrived meanwhile is shown a quarter of a second at a time.
-    if (nearEdge || stretched || (this._wanted && age > 250)) this._draw();
+    const nearEdge = Math.min(view.x - pos.x, right) < pad.x * 0.2 || Math.min(view.y - pos.y, bottom) < pad.y * 0.2;
+    // A zoom stretches the picture: draw again when it gets blurry, and now and then.
+    const stretched = scale > 1.4 || scale < 0.6 || (scale !== 1 && now - this._at.time > 300);
+    if (nearEdge || stretched) this._draw();
     else this._place(pos, scale);
   },
 
   _onMoveEnd() {
     this._moving = false;
     const map = this._map;
-    const topLeft = map.containerPointToLayerPoint([0, 0]).subtract(this._pad).round();
-    const moved = !this._at || map.getZoom() !== this._at.zoom || !map.getPixelOrigin().add(topLeft).equals(this._at.origin);
-    if (moved || this._wanted) this._draw();
+    if (this._at && map.getZoom() !== this._at.zoom) return this._draw(); // still stretched: at once
+    // Centre the picture in its margin again (and show map data that arrived), a moment later so
+    // that a quick next swipe starts smoothly; if it comes first, that waits for its end.
+    clearTimeout(this._settle);
+    this._settle = setTimeout(() => {
+      this._settle = 0;
+      if (this._moving || !this._map) return;
+      const topLeft = map.containerPointToLayerPoint([0, 0]).subtract(this._pad).round();
+      const moved = !this._at || map.getZoom() !== this._at.zoom || !map.getPixelOrigin().add(topLeft).equals(this._at.origin);
+      if (moved || this._wanted) this._draw();
+    }, 150);
   },
 
   // Leaflet's zoom animation: the picture is moved and scaled to where it belongs at the end, and

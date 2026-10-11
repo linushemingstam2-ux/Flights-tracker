@@ -119,17 +119,24 @@ export const AircraftLayer = L.Layer.extend({
   _onMoveStart() {
     this._moving = true;
     this._lastMove = Date.now();
+    this._zoomed = false;
   },
 
   _onMove() {
     const map = this._map;
     this._lastMove = Date.now();
-    if (map.getZoom() !== this._zoom || !this._origin || !map.getPixelOrigin().equals(this._origin)) this._dirty = true;
+    if (map.getZoom() !== this._zoom || !this._origin || !map.getPixelOrigin().equals(this._origin)) {
+      this._dirty = true;
+      this._zoomed = true;
+    }
   },
 
+  // After a zoom the frame is stretched and is redrawn at once; after a pan, a moment later, so a
+  // quick next swipe starts smoothly.
   _onMoveEnd() {
     this._moving = false;
     this._dirty = true;
+    this._quietUntil = this._zoomed || this._animating ? 0 : Date.now() + 150;
   },
 
   // Redrawing the whole canvas is the costliest thing the app does, and every redraw also makes
@@ -160,6 +167,7 @@ export const AircraftLayer = L.Layer.extend({
     // move that never reported its end is over after a second without news.)
     if (this._moving && t - this._lastMove > 1000) this._moving = false;
     if (this._moving && (!this._dirty || since < 33)) return;
+    if (t < (this._quietUntil || 0)) return;
     if (since < 15 || (!this._dirty && since < this._interval)) return;
     this._dirty = false;
     this._lastDraw = t;
