@@ -1,4 +1,4 @@
-// A Leaflet layer that draws every aircraft (plus trails and the selected flight's route)
+// A Leaflet layer that draws every aircraft (plus the selected flight's trail and route, and airline logos)
 // onto one canvas, redrawn when the map moves and as often as the aircraft visibly move.
 
 import {
@@ -17,6 +17,7 @@ import {
 } from './icons.js?v=15';
 import { destinationPoint, greatCirclePoints } from './shared/geo.js';
 import { isEmergency } from './format.js?v=2';
+import { airlineCode, logoBadge, onLogoReady, BADGE_PAD } from './airline-logos.js?v=1';
 
 const L = window.L;
 const DEG = Math.PI / 180;
@@ -49,7 +50,7 @@ const INK = {
 export const AircraftLayer = L.Layer.extend({
   initialize(store, getOptions) {
     this.store = store;
-    this.getOptions = getOptions; // () => { ink, allTrails, filter, route, coverage }
+    this.getOptions = getOptions; // () => { ink, logos, filter, route, coverage }
     this._hits = [];
     this._frame = this._frame.bind(this);
     this._selScale = 1.15;
@@ -68,6 +69,7 @@ export const AircraftLayer = L.Layer.extend({
     map.on('zoomanim', this._onZoomAnim, this);
     map.on('zoomend', this._onZoomEnd, this);
     map.on('move resize viewreset', this._invalidate, this);
+    onLogoReady(() => (this._dirty = true));
     this._raf = requestAnimationFrame(this._frame);
   },
 
@@ -115,7 +117,7 @@ export const AircraftLayer = L.Layer.extend({
     if (
       !prev ||
       o.ink !== prev.ink ||
-      o.allTrails !== prev.allTrails ||
+      o.logos !== prev.logos ||
       o.filter !== prev.filter ||
       o.route !== prev.route ||
       o.coverage !== prev.coverage ||
@@ -202,7 +204,7 @@ export const AircraftLayer = L.Layer.extend({
 
     if (o.coverage) this._drawCoverage(ctx, o.coverage, project);
 
-    // Work out what is on screen once, then draw in layers: trails, shadows, planes.
+    // Work out what is on screen once, then draw in layers: the selected trail, shadows, planes.
     const hits = [];
     for (const ac of store.sorted) {
       if (ac !== selected && !o.filter(ac)) continue;
@@ -228,11 +230,6 @@ export const AircraftLayer = L.Layer.extend({
     if (dt < 900) fps = 60; // the selected aircraft popping up
     this._interval = 1000 / Math.min(60, fps);
 
-    if (o.allTrails && hits.length < 1500) {
-      for (const hit of hits) {
-        if (hit.ac !== selected) this._drawTrail(ctx, hit.ac, hit, project, 1.5, 0.55, 80);
-      }
-    }
     const selHit = selected && hits.find((hit) => hit.ac === selected);
     if (selHit) {
       if (o.route) this._drawRoute(ctx, o.route, selected, project, t);
@@ -250,6 +247,44 @@ export const AircraftLayer = L.Layer.extend({
     }
     if (selHit) this._drawPlane(ctx, selHit, iconPx, dpr, t, true);
     this._drawLife(ctx, hits, selected, iconPx, dpr, t);
+    if (o.logos) this._drawLogos(ctx, hits, selHit, iconPx, dpr);
+  },
+
+  // Airline logos beside the aircraft, upright, from regional zoom in. A logo that would land on
+  // another is left out, so busy skies stay readable; the selected aircraft's always shows.
+  _drawLogos(ctx, hits, selHit, iconPx, dpr) {
+    const zoom = this._zoom;
+    if (zoom < 6 && !selHit) return;
+    const size = zoom >= 10 ? 18 : zoom >= 8 ? 16 : 14;
+    const cell = size + 3;
+    const taken = new Set();
+    const key = (cx, cy) => `${cx},${cy}`;
+    const free = (x, y) => {
+      const cx = Math.floor(x / cell);
+      const cy = Math.floor(y / cell);
+      for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) if (taken.has(key(cx + i, cy + j))) return false;
+      return true;
+    };
+    // The selected aircraft first, then from the highest down: airliners cruise up there.
+    const order = [];
+    if (selHit) order.push(selHit);
+    for (let i = hits.length - 1; i >= 0; i--) if (hits[i] !== selHit) order.push(hits[i]);
+    let drawn = 0;
+    for (const hit of order) {
+      const isSelected = hit === selHit;
+      if (zoom < 6 && !isSelected) continue;
+      const code = airlineCode(hit.ac.callsign);
+      if (!code) continue;
+      const px = this._size(hit.ac, iconPx, isSelected);
+      const x = hit.x + px * (isSelected ? 0.8 : 0.48) + 2;
+      const y = hit.y - size / 2;
+      if (!isSelected && !free(x, y)) continue;
+      const badge = logoBadge(code, size, dpr);
+      if (!badge) continue;
+      taken.add(key(Math.floor(x / cell), Math.floor(y / cell)));
+      ctx.drawImage(badge, x - BADGE_PAD, y - BADGE_PAD, size + BADGE_PAD * 2, size + BADGE_PAD * 2);
+      if (++drawn >= 160) break;
+    }
   },
 
   _color(ac, isSelected) {

@@ -1,29 +1,47 @@
-// The base map, styled after Apple Maps: warm cream land, bright aqua water, soft green parks,
-// motorways as solid grey ribbons (the brightest roads at night), white streets with cool grey
-// edges, and airports in Apple's blue-grey with their runways and taxiways drawn. Colours follow
-// samples taken from Apple's own map. Vector tiles of OpenStreetMap come from OpenFreeMap, in the
-// OpenMapTiles schema; labels use Noto Sans from the same server.
+// The base maps, styled after Apple Maps: warm cream land with soft relief shading, bright aqua
+// water, soft green parks, motorways as solid grey ribbons (the brightest roads at night) with
+// route signs, white streets with cool grey edges, and airports in Apple's blue-grey with their
+// runways and taxiways drawn. Colours follow samples taken from Apple's own map. Vector tiles of
+// OpenStreetMap come from OpenFreeMap, in the OpenMapTiles schema; terrain comes from the free
+// elevation tiles on AWS; labels are set in Inter, served with the app (see public/fonts).
 
 export const VECTOR_TILES = 'https://tiles.openfreemap.org/planet';
-const GLYPHS = 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf';
+const GLYPHS = `${typeof location === 'undefined' ? 'https://localhost/' : new URL('./', location.href).href}fonts/{fontstack}/{range}.pbf`;
 const ATTRIBUTION =
   '<a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> ' +
   '<a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">&copy; OpenMapTiles</a> ' +
   'Data from <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>';
 
-const REGULAR = ['Noto Sans Regular'];
-const ITALIC = ['Noto Sans Italic'];
+// Heights of the land, encoded in the colours of PNG tiles. Beyond zoom 11 the shading is faint
+// and smooth, so closer in the same tiles are enlarged instead of downloading finer ones.
+const TERRAIN = {
+  type: 'raster-dem',
+  tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
+  encoding: 'terrarium',
+  tileSize: 256,
+  maxzoom: 11,
+  attribution: 'Terrain <a href="https://github.com/tilezen/joerd/blob/master/docs/attribution.md" target="_blank" rel="noopener">Mapzen and others</a>',
+};
+
+const REGULAR = ['Inter-Regular'];
+const MEDIUM = ['Inter-Medium'];
+const SEMIBOLD = ['Inter-SemiBold'];
+const BOLD = ['Inter-Bold'];
+const ITALIC = ['Inter-Italic'];
 
 const PALETTES = {
   light: {
     land: '#f6f4eb',
-    builtUp: '#fef4df',
+    builtUp: '#fdf2dc',
     park: '#c6e9a8',
-    wood: '#bfe5a3',
+    wood: '#c2e5a5',
     water: '#8ddbf6',
     medical: '#fbebe8',
     sand: '#f6edcf',
     ice: '#ffffff',
+    reliefShadow: 'rgba(96, 84, 64, 0.34)',
+    reliefHighlight: 'rgba(255, 255, 255, 0.55)',
+    reliefAccent: 'rgba(96, 84, 64, 0.14)',
     aerodrome: '#dbe5ee',
     apron: '#d1dce7',
     runway: '#bfcbd8',
@@ -38,28 +56,41 @@ const PALETTES = {
     minorEdge: '#e0e3e6',
     path: '#ffffff',
     rail: '#c8cacf',
-    country: '#bcb6c8',
-    state: '#d2ced9',
-    label: '#222222',
-    countryLabel: '#6b6f76',
-    quietLabel: '#747979',
-    roadLabel: '#6c7075',
+    country: '#b1a9c0',
+    countryGlow: 'rgba(190, 178, 214, 0.3)',
+    state: '#d0cbd9',
+    label: '#1d1d1f',
+    townLabel: '#36363a',
+    villageLabel: '#55585e',
+    countryLabel: '#5d5a6e',
+    stateLabel: '#8e8a9d',
+    quietLabel: '#868a90',
+    roadLabel: '#5f6368',
     waterLabel: '#2f88c0',
-    parkLabel: '#1f823d',
+    parkLabel: '#2b8546',
+    peakLabel: '#857560',
     airportLabel: '#3e5d80',
     halo: 'rgba(246, 244, 235, 0.92)',
     roadHalo: 'rgba(255, 255, 255, 0.95)',
     badge: '#3d84e8',
+    shields: {
+      green: { fill: '#1c8a4e', edge: '#ffffff', text: '#ffffff' },
+      blue: { fill: '#2c64c6', edge: '#ffffff', text: '#ffffff' },
+      white: { fill: '#ffffff', edge: '#c3c7cd', text: '#3b3f45' },
+    },
   },
   dark: {
     land: '#34445b',
-    builtUp: '#45476e',
+    builtUp: '#41486a',
     park: '#005d5b',
     wood: '#04534f',
-    water: '#1c347a',
+    water: '#1a2b5e',
     medical: '#404458',
     sand: '#46506a',
     ice: '#566a86',
+    reliefShadow: 'rgba(9, 15, 30, 0.4)',
+    reliefHighlight: 'rgba(160, 184, 224, 0.1)',
+    reliefAccent: 'rgba(9, 15, 30, 0.15)',
     aerodrome: '#314d76',
     apron: '#38567f',
     runway: '#5372a0',
@@ -74,18 +105,55 @@ const PALETTES = {
     minorEdge: 'rgba(52, 68, 91, 0)',
     path: '#4d5b75',
     rail: '#5a6883',
-    country: '#7c89a5',
+    country: '#8290ad',
+    countryGlow: 'rgba(130, 146, 184, 0.12)',
     state: '#5a6883',
-    label: '#dae4ed',
-    countryLabel: '#b3bfcf',
-    quietLabel: '#a5b4c6',
+    label: '#e8eef6',
+    townLabel: '#d5dfeb',
+    villageLabel: '#b7c3d3',
+    countryLabel: '#b8c3d6',
+    stateLabel: '#8d9bb2',
+    quietLabel: '#a1afc2',
     roadLabel: '#aab6c7',
     waterLabel: '#86a9e8',
     parkLabel: '#79d0bb',
+    peakLabel: '#b2bccb',
     airportLabel: '#bdd0ea',
     halo: 'rgba(52, 68, 91, 0.9)',
     roadHalo: 'rgba(52, 68, 91, 0.9)',
     badge: '#4a8ef0',
+    shields: {
+      green: { fill: '#1e7c48', edge: 'rgba(255, 255, 255, 0.85)', text: '#ffffff' },
+      blue: { fill: '#2e60bd', edge: 'rgba(255, 255, 255, 0.85)', text: '#ffffff' },
+      white: { fill: '#58678a', edge: 'rgba(255, 255, 255, 0.3)', text: '#eef2f8' },
+    },
+  },
+  satellite: {
+    land: '#0e1a24',
+    motorway: 'rgba(255, 222, 130, 0.62)',
+    road: 'rgba(255, 255, 255, 0.4)',
+    country: 'rgba(255, 255, 255, 0.8)',
+    countryGlow: 'rgba(0, 0, 0, 0.3)',
+    state: 'rgba(255, 255, 255, 0.45)',
+    label: '#ffffff',
+    townLabel: '#ffffff',
+    villageLabel: 'rgba(255, 255, 255, 0.92)',
+    countryLabel: '#ffffff',
+    stateLabel: 'rgba(255, 255, 255, 0.82)',
+    quietLabel: 'rgba(255, 255, 255, 0.88)',
+    roadLabel: 'rgba(255, 255, 255, 0.92)',
+    waterLabel: '#cbe6ff',
+    parkLabel: '#d6f4cc',
+    peakLabel: 'rgba(255, 255, 255, 0.9)',
+    airportLabel: '#ffffff',
+    halo: 'rgba(0, 0, 0, 0.6)',
+    roadHalo: 'rgba(0, 0, 0, 0.6)',
+    badge: '#3d84e8',
+    shields: {
+      green: { fill: '#1c8a4e', edge: '#ffffff', text: '#ffffff' },
+      blue: { fill: '#2c64c6', edge: '#ffffff', text: '#ffffff' },
+      white: { fill: '#ffffff', edge: 'rgba(0, 0, 0, 0.25)', text: '#3b3f45' },
+    },
   },
 };
 
@@ -96,7 +164,10 @@ const NAME = ['coalesce', ['get', 'name:en'], ['get', 'name:latin'], ['get', 'na
 const LINES = ['match', ['geometry-type'], ['LineString', 'MultiLineString'], true, false];
 const AREAS = ['match', ['geometry-type'], ['Polygon', 'MultiPolygon'], true, false];
 const POINTS = ['match', ['geometry-type'], ['Point', 'MultiPoint'], true, false];
+const RANK = ['coalesce', ['get', 'rank'], 99];
 const tunnelFade = ['case', ['==', ['get', 'brunnel'], 'tunnel'], 0.45, 1];
+/** A different value for the most important features: `rank` at or below `top`. */
+const byRank = (top, big, small) => ['case', ['<=', RANK, top], big, small];
 
 // Road classes from the most to the least important, with their widths (CSS px) by zoom.
 const ROADS = [
@@ -160,27 +231,31 @@ function roadLayers(C) {
   return layers;
 }
 
-/** The complete MapLibre style for the light or dark map. */
+/** The complete MapLibre style for the light, dark or satellite map. */
 export function vectorStyle(theme) {
+  if (theme === 'satellite') return satelliteStyle();
   const C = PALETTES[theme] || PALETTES.light;
-  const halo = { 'text-halo-color': C.halo, 'text-halo-width': 1.4, 'text-halo-blur': 0.4 };
   return {
     version: 8,
     name: `Tracker ${theme}`,
     glyphs: GLYPHS,
-    sources: { omt: { type: 'vector', url: VECTOR_TILES, attribution: ATTRIBUTION } },
+    sources: {
+      omt: { type: 'vector', url: VECTOR_TILES, attribution: ATTRIBUTION },
+      terrain: TERRAIN,
+    },
     layers: [
       { id: 'land', type: 'background', paint: { 'background-color': C.land } },
 
       // ── Ground cover ──
       {
+        // Towns and cities: a warm tint that shows where people live from regional zoom.
         id: 'built-up',
         type: 'fill',
         source: 'omt',
         'source-layer': 'landuse',
-        minzoom: 10,
+        minzoom: 5,
         filter: ['match', ['get', 'class'], ['residential', 'suburb', 'neighbourhood', 'commercial', 'retail', 'industrial', 'garages'], true, false],
-        paint: { 'fill-color': C.builtUp, 'fill-opacity': lin(10, 0, 13, 1) },
+        paint: { 'fill-color': C.builtUp, 'fill-opacity': lin(5, 0.55, 9, 0.8, 13, 1) },
       },
       {
         id: 'wood',
@@ -240,6 +315,24 @@ export function vectorStyle(theme) {
         'source-layer': 'landcover',
         filter: ['==', ['get', 'class'], 'ice'],
         paint: { 'fill-color': C.ice, 'fill-opacity': 0.9 },
+      },
+
+      // ── Relief: mountains and valleys shaded as if lit from the north-west, strongest when
+      // zoomed out and fading away over the flat detail of a city ──
+      {
+        id: 'relief',
+        type: 'hillshade',
+        source: 'terrain',
+        maxzoom: 16,
+        paint: {
+          'hillshade-method': 'combined',
+          'hillshade-exaggeration': lin(0, 0.6, 6, 0.6, 10, 0.5, 13, 0.3, 15, 0.12),
+          'hillshade-shadow-color': C.reliefShadow,
+          'hillshade-highlight-color': C.reliefHighlight,
+          'hillshade-accent-color': C.reliefAccent,
+          'hillshade-illumination-direction': 315,
+          'hillshade-illumination-anchor': 'viewport',
+        },
       },
 
       // ── Airports: Apple's blue-grey ground, with aprons, runways and taxiways ──
@@ -360,221 +453,359 @@ export function vectorStyle(theme) {
         paint: { 'fill-color': C.building, 'fill-outline-color': C.buildingEdge, 'fill-opacity': lin(13, 0, 14.5, 1) },
       },
 
-      // ── Borders ──
-      {
-        id: 'state-border',
-        type: 'line',
-        source: 'omt',
-        'source-layer': 'boundary',
-        minzoom: 4,
-        filter: ['all', ['==', ['get', 'admin_level'], 4], ['!=', ['get', 'maritime'], 1]],
-        layout: { 'line-join': 'round' },
-        paint: { 'line-color': C.state, 'line-width': lin(4, 0.5, 10, 1.2), 'line-dasharray': [3, 2] },
-      },
-      {
-        id: 'country-border',
-        type: 'line',
-        source: 'omt',
-        'source-layer': 'boundary',
-        filter: ['all', ['==', ['get', 'admin_level'], 2], ['!=', ['get', 'maritime'], 1]],
-        layout: { 'line-join': 'round', 'line-cap': 'round' },
-        paint: { 'line-color': C.country, 'line-width': lin(2, 0.6, 6, 1.1, 10, 1.8) },
-      },
-
-      // ── Labels ──
-      {
-        id: 'water-name',
-        type: 'symbol',
-        source: 'omt',
-        'source-layer': 'water_name',
-        filter: POINTS,
-        layout: {
-          'text-field': NAME,
-          'text-font': ITALIC,
-          'text-size': ['match', ['get', 'class'], 'ocean', 15, 'sea', 13, 12],
-          'text-letter-spacing': ['match', ['get', 'class'], ['ocean', 'sea'], 0.12, 0.04],
-          'text-max-width': 7,
-        },
-        paint: { 'text-color': C.waterLabel },
-      },
-      {
-        id: 'river-name',
-        type: 'symbol',
-        source: 'omt',
-        'source-layer': 'waterway',
-        minzoom: 13,
-        filter: ['==', ['get', 'class'], 'river'],
-        layout: { 'symbol-placement': 'line', 'text-field': NAME, 'text-font': ITALIC, 'text-size': 11, 'text-letter-spacing': 0.06 },
-        paint: { 'text-color': C.waterLabel },
-      },
-      {
-        id: 'park-name',
-        type: 'symbol',
-        source: 'omt',
-        'source-layer': 'park',
-        minzoom: 13,
-        filter: POINTS,
-        layout: { 'text-field': NAME, 'text-font': REGULAR, 'text-size': 11, 'text-max-width': 8 },
-        paint: { 'text-color': C.parkLabel, ...halo },
-      },
-      {
-        id: 'road-name',
-        type: 'symbol',
-        source: 'omt',
-        'source-layer': 'transportation_name',
-        minzoom: 13,
-        filter: ['match', ['get', 'class'], ['motorway', 'trunk', 'primary', 'secondary', 'tertiary', 'minor'], true, false],
-        layout: {
-          'symbol-placement': 'line',
-          'text-field': NAME,
-          'text-font': REGULAR,
-          'text-size': lin(13, 10, 18, 13),
-          'text-letter-spacing': 0.02,
-          'symbol-spacing': 320,
-        },
-        paint: { 'text-color': C.roadLabel, 'text-halo-color': C.roadHalo, 'text-halo-width': 1.4 },
-      },
-      {
-        id: 'airport',
-        type: 'symbol',
-        source: 'omt',
-        'source-layer': 'aerodrome_label',
-        minzoom: 8,
-        filter: ['has', 'iata'],
-        layout: {
-          'icon-image': `airport-badge-${theme}`,
-          'icon-size': lin(8, 0.8, 12, 1),
-          'text-field': ['format', NAME, {}, '\n', {}, ['get', 'iata'], { 'font-scale': 0.85 }],
-          'text-font': REGULAR,
-          'text-size': lin(8, 10.5, 13, 12.5),
-          'text-anchor': 'top',
-          'text-offset': [0, 1.3],
-          'text-max-width': 9,
-          'text-optional': true,
-        },
-        paint: { 'text-color': C.airportLabel, ...halo },
-      },
-      {
-        id: 'neighbourhood',
-        type: 'symbol',
-        source: 'omt',
-        'source-layer': 'place',
-        minzoom: 12,
-        filter: ['match', ['get', 'class'], ['suburb', 'quarter', 'neighbourhood'], true, false],
-        layout: {
-          'text-field': NAME,
-          'text-font': REGULAR,
-          'text-size': lin(12, 9.5, 16, 12),
-          'text-transform': 'uppercase',
-          'text-letter-spacing': 0.12,
-          'text-max-width': 8,
-        },
-        paint: { 'text-color': C.quietLabel, ...halo },
-      },
-      {
-        id: 'village',
-        type: 'symbol',
-        source: 'omt',
-        'source-layer': 'place',
-        minzoom: 12,
-        filter: ['match', ['get', 'class'], ['village', 'hamlet'], true, false],
-        layout: {
-          'text-field': NAME,
-          'text-font': REGULAR,
-          'text-size': lin(12, 10, 15, 12.5),
-          'text-max-width': 8,
-          'symbol-sort-key': ['coalesce', ['get', 'rank'], 99],
-        },
-        paint: { 'text-color': C.quietLabel, ...halo },
-      },
-      {
-        id: 'town',
-        type: 'symbol',
-        source: 'omt',
-        'source-layer': 'place',
-        minzoom: 8,
-        filter: ['==', ['get', 'class'], 'town'],
-        layout: {
-          'text-field': NAME,
-          'text-font': REGULAR,
-          'text-size': lin(8, 10.5, 12, 13, 15, 15.5),
-          'text-max-width': 8,
-          'symbol-sort-key': ['coalesce', ['get', 'rank'], 99],
-        },
-        paint: { 'text-color': C.label, ...halo },
-      },
-      {
-        id: 'city',
-        type: 'symbol',
-        source: 'omt',
-        'source-layer': 'place',
-        minzoom: 3,
-        filter: ['==', ['get', 'class'], 'city'],
-        layout: {
-          'text-field': NAME,
-          'text-font': REGULAR,
-          'text-size': [
-            'interpolate', ['linear'], ['zoom'],
-            4, ['case', ['<=', ['coalesce', ['get', 'rank'], 99], 3], 13, 11],
-            8, ['case', ['<=', ['coalesce', ['get', 'rank'], 99], 3], 17, 14],
-            12, ['case', ['<=', ['coalesce', ['get', 'rank'], 99], 3], 21, 17],
-          ],
-          'text-max-width': 8,
-          'symbol-sort-key': ['coalesce', ['get', 'rank'], 99],
-        },
-        paint: { 'text-color': C.label, ...halo },
-      },
-      {
-        id: 'state',
-        type: 'symbol',
-        source: 'omt',
-        'source-layer': 'place',
-        minzoom: 5,
-        maxzoom: 9,
-        filter: ['==', ['get', 'class'], 'state'],
-        layout: {
-          'text-field': NAME,
-          'text-font': REGULAR,
-          'text-size': lin(5, 9.5, 8, 11.5),
-          'text-transform': 'uppercase',
-          'text-letter-spacing': 0.14,
-          'text-max-width': 9,
-        },
-        paint: { 'text-color': C.quietLabel, ...halo },
-      },
-      {
-        id: 'country',
-        type: 'symbol',
-        source: 'omt',
-        'source-layer': 'place',
-        minzoom: 2,
-        maxzoom: 8,
-        filter: ['==', ['get', 'class'], 'country'],
-        layout: {
-          'text-field': NAME,
-          'text-font': REGULAR,
-          'text-size': lin(2, ['case', ['<=', ['coalesce', ['get', 'rank'], 9], 2], 13, 11], 6, ['case', ['<=', ['coalesce', ['get', 'rank'], 9], 2], 18, 14]),
-          'text-letter-spacing': 0.06,
-          'text-max-width': 7,
-          'symbol-sort-key': ['coalesce', ['get', 'rank'], 99],
-        },
-        paint: { 'text-color': C.countryLabel, ...halo },
-      },
+      ...overlayLayers(C, theme),
     ],
   };
+}
+
+// The sign colour of a road's number: green for the European E-roads (as on their signs), blue
+// for other motorways and white for main roads. Only the first of several numbers is shown.
+const REF = ['let', 'ref', ['get', 'ref'], ['let', 'cut', ['index-of', ';', ['var', 'ref']],
+  ['case', ['>', ['var', 'cut'], 0], ['slice', ['var', 'ref'], 0, ['var', 'cut']], ['var', 'ref']]]];
+const SHIELD = [
+  'case',
+  ['any', ['==', ['get', 'network'], 'e-road'], ['all', ['==', ['slice', ['get', 'ref'], 0, 1], 'E'], ['!=', ['to-number', ['slice', ['get', 'ref'], 1, 2], -1], -1]]], 'green',
+  ['==', ['get', 'class'], 'motorway'], 'blue',
+  'white',
+];
+
+/** Borders and every label: shared by the light, dark and satellite maps, each in its own colours. */
+function overlayLayers(C, theme) {
+  const halo = { 'text-halo-color': C.halo, 'text-halo-width': 1.5, 'text-halo-blur': 0.25 };
+  const nationalBorder = ['all', ['==', ['get', 'admin_level'], 2], ['!=', ['get', 'maritime'], 1]];
+  return [
+  // ── Borders: a soft band of colour under a fine line, dashed where disputed ──
+  {
+    id: 'country-border-glow',
+    type: 'line',
+    source: 'omt',
+    'source-layer': 'boundary',
+    minzoom: 2,
+    filter: nationalBorder,
+    layout: { 'line-join': 'round', 'line-cap': 'round' },
+    paint: { 'line-color': C.countryGlow, 'line-width': lin(2, 2, 5, 5, 9, 9), 'line-blur': lin(2, 1, 9, 3) },
+  },
+  {
+    id: 'state-border',
+    type: 'line',
+    source: 'omt',
+    'source-layer': 'boundary',
+    minzoom: 4,
+    filter: ['all', ['==', ['get', 'admin_level'], 4], ['!=', ['get', 'maritime'], 1]],
+    layout: { 'line-join': 'round' },
+    paint: { 'line-color': C.state, 'line-width': lin(4, 0.5, 10, 1.2), 'line-dasharray': [3, 2] },
+  },
+  {
+    id: 'country-border',
+    type: 'line',
+    source: 'omt',
+    'source-layer': 'boundary',
+    filter: ['all', nationalBorder, ['!=', ['get', 'disputed'], 1]],
+    layout: { 'line-join': 'round', 'line-cap': 'round' },
+    paint: { 'line-color': C.country, 'line-width': lin(1, 0.5, 5, 0.9, 10, 1.6) },
+  },
+  {
+    id: 'disputed-border',
+    type: 'line',
+    source: 'omt',
+    'source-layer': 'boundary',
+    filter: ['all', nationalBorder, ['==', ['get', 'disputed'], 1]],
+    layout: { 'line-join': 'round' },
+    paint: { 'line-color': C.country, 'line-width': lin(1, 0.5, 5, 0.9, 10, 1.6), 'line-dasharray': [2, 2] },
+  },
+
+  // ── Labels ──
+  {
+    id: 'water-name',
+    type: 'symbol',
+    source: 'omt',
+    'source-layer': 'water_name',
+    filter: POINTS,
+    layout: {
+      'text-field': NAME,
+      'text-font': ITALIC,
+      'text-size': lin(0, ['match', ['get', 'class'], 'ocean', 12, 'sea', 12, 11.5], 4, ['match', ['get', 'class'], 'ocean', 15, 'sea', 12.5, 11.5]),
+      'text-letter-spacing': ['match', ['get', 'class'], 'ocean', 0.12, 'sea', 0.08, 0.03],
+      'text-max-width': ['match', ['get', 'class'], 'ocean', 6, 7],
+      'text-line-height': 1.3,
+    },
+    paint: { 'text-color': C.waterLabel },
+  },
+  {
+    id: 'river-name',
+    type: 'symbol',
+    source: 'omt',
+    'source-layer': 'waterway',
+    minzoom: 12,
+    filter: ['==', ['get', 'class'], 'river'],
+    layout: { 'symbol-placement': 'line', 'text-field': NAME, 'text-font': ITALIC, 'text-size': 11, 'text-letter-spacing': 0.08, 'symbol-spacing': 400 },
+    paint: { 'text-color': C.waterLabel, 'text-halo-color': C.water ?? C.halo, 'text-halo-width': 0.6 },
+  },
+  {
+    id: 'park-name',
+    type: 'symbol',
+    source: 'omt',
+    'source-layer': 'park',
+    minzoom: 13,
+    filter: POINTS,
+    layout: { 'text-field': NAME, 'text-font': MEDIUM, 'text-size': 11, 'text-max-width': 8 },
+    paint: { 'text-color': C.parkLabel, ...halo },
+  },
+  {
+    id: 'peak',
+    type: 'symbol',
+    source: 'omt',
+    'source-layer': 'mountain_peak',
+    minzoom: 11,
+    filter: ['all', POINTS, ['has', 'name'], ['has', 'ele'], ['==', ['get', 'class'], 'peak']],
+    layout: {
+      'text-field': ['format', NAME, {}, '\n', {}, ['concat', ['to-string', ['get', 'ele']], ' m'], { 'font-scale': 0.85, 'text-font': ['literal', REGULAR] }],
+      'text-font': MEDIUM,
+      'text-size': 10.5,
+      'text-max-width': 8,
+      'text-line-height': 1.15,
+      'symbol-sort-key': RANK,
+    },
+    paint: { 'text-color': C.peakLabel, ...halo },
+  },
+  {
+    id: 'road-name',
+    type: 'symbol',
+    source: 'omt',
+    'source-layer': 'transportation_name',
+    minzoom: 13,
+    filter: ['all', LINES, ['match', ['get', 'class'], ['motorway', 'trunk', 'primary', 'secondary', 'tertiary', 'minor'], true, false]],
+    layout: {
+      'symbol-placement': 'line',
+      'text-field': NAME,
+      'text-font': MEDIUM,
+      'text-size': lin(13, 10, 18, 13),
+      'text-letter-spacing': 0.01,
+      'symbol-spacing': 320,
+    },
+    paint: { 'text-color': C.roadLabel, 'text-halo-color': C.roadHalo, 'text-halo-width': 1.4 },
+  },
+  {
+    // Route numbers on signs, as on the motorway itself.
+    id: 'road-shield',
+    type: 'symbol',
+    source: 'omt',
+    'source-layer': 'transportation_name',
+    minzoom: 7,
+    filter: ['all', LINES, ['has', 'ref'], ['<=', ['get', 'ref_length'], 6], ['match', ['get', 'class'], ['motorway', 'trunk'], true, false]],
+    layout: {
+      'symbol-placement': 'line',
+      'symbol-spacing': 360,
+      'icon-image': ['concat', 'shield-', SHIELD, `-${theme}`],
+      'icon-text-fit': 'both',
+      'icon-text-fit-padding': [1, 3.5, 1, 3.5],
+      'icon-rotation-alignment': 'viewport',
+      'text-rotation-alignment': 'viewport',
+      'text-field': REF,
+      'text-font': BOLD,
+      'text-size': lin(7, 9, 12, 10.5),
+      'text-letter-spacing': 0.02,
+      'symbol-sort-key': ['match', SHIELD, 'green', 0, 'blue', 1, 2],
+    },
+    paint: { 'text-color': ['match', SHIELD, 'green', C.shields.green.text, 'blue', C.shields.blue.text, C.shields.white.text] },
+  },
+  {
+    id: 'airport',
+    type: 'symbol',
+    source: 'omt',
+    'source-layer': 'aerodrome_label',
+    minzoom: 6,
+    // Big international airports from regional zoom, the rest once a region fills the screen.
+    filter: ['all', ['has', 'iata'], ['any', ['>=', ['zoom'], 8], ['==', ['get', 'class'], 'international']]],
+    layout: {
+      'icon-image': `airport-badge-${theme}`,
+      'icon-size': lin(6, 0.75, 12, 1),
+      'text-field': ['format', NAME, {}, '\n', {}, ['get', 'iata'], { 'font-scale': 0.85, 'text-font': ['literal', MEDIUM] }],
+      'text-font': SEMIBOLD,
+      'text-size': lin(6, 10, 13, 12),
+      'text-anchor': 'top',
+      'text-offset': [0, 1.25],
+      'text-max-width': 9,
+      'text-line-height': 1.15,
+      'text-optional': true,
+      'symbol-sort-key': ['match', ['get', 'class'], 'international', 0, 1],
+    },
+    paint: { 'text-color': C.airportLabel, ...halo },
+  },
+  {
+    id: 'neighbourhood',
+    type: 'symbol',
+    source: 'omt',
+    'source-layer': 'place',
+    minzoom: 12,
+    filter: ['match', ['get', 'class'], ['suburb', 'quarter', 'neighbourhood'], true, false],
+    layout: {
+      'text-field': NAME,
+      'text-font': SEMIBOLD,
+      'text-size': lin(12, 9, 16, 11.5),
+      'text-transform': 'uppercase',
+      'text-letter-spacing': 0.1,
+      'text-max-width': 8,
+    },
+    paint: { 'text-color': C.quietLabel, ...halo },
+  },
+  {
+    id: 'village',
+    type: 'symbol',
+    source: 'omt',
+    'source-layer': 'place',
+    minzoom: 11,
+    filter: ['match', ['get', 'class'], ['village', 'hamlet'], true, false],
+    layout: {
+      'text-field': NAME,
+      'text-font': REGULAR,
+      'text-size': lin(11, 10, 15, 12.5),
+      'text-max-width': 8,
+      'symbol-sort-key': RANK,
+    },
+    paint: { 'text-color': C.villageLabel, ...halo },
+  },
+  {
+    id: 'town',
+    type: 'symbol',
+    source: 'omt',
+    'source-layer': 'place',
+    minzoom: 7,
+    filter: ['==', ['get', 'class'], 'town'],
+    layout: {
+      'text-field': NAME,
+      'text-font': MEDIUM,
+      'text-size': lin(7, 10, 12, 13, 15, 15.5),
+      'text-max-width': 8,
+      'symbol-sort-key': RANK,
+    },
+    paint: { 'text-color': C.townLabel, ...halo },
+  },
+  {
+    id: 'city',
+    type: 'symbol',
+    source: 'omt',
+    'source-layer': 'place',
+    minzoom: 3,
+    filter: ['==', ['get', 'class'], 'city'],
+    layout: {
+      'text-field': NAME,
+      // Capitals and the largest cities stand out in a heavier weight.
+      'text-font': ['case', ['any', ['<=', RANK, 3], ['==', ['get', 'capital'], 2]], ['literal', SEMIBOLD], ['literal', MEDIUM]],
+      'text-size': lin(3, byRank(3, 12, 10.5), 6, byRank(3, 14.5, 12.5), 9, byRank(3, 17.5, 15), 12, byRank(3, 21, 17)),
+      'text-max-width': 8,
+      'symbol-sort-key': RANK,
+    },
+    paint: { 'text-color': C.label, ...halo },
+  },
+  {
+    id: 'state',
+    type: 'symbol',
+    source: 'omt',
+    'source-layer': 'place',
+    minzoom: 4,
+    maxzoom: 9,
+    filter: ['==', ['get', 'class'], 'state'],
+    layout: {
+      'text-field': NAME,
+      'text-font': MEDIUM,
+      'text-size': lin(4, 9, 8, 11),
+      'text-transform': 'uppercase',
+      'text-letter-spacing': 0.14,
+      'text-max-width': 8,
+      'symbol-sort-key': RANK,
+    },
+    paint: { 'text-color': C.stateLabel, ...halo },
+  },
+  {
+    id: 'country',
+    type: 'symbol',
+    source: 'omt',
+    'source-layer': 'place',
+    minzoom: 1,
+    maxzoom: 9,
+    filter: ['==', ['get', 'class'], 'country'],
+    layout: {
+      'text-field': NAME,
+      'text-font': SEMIBOLD,
+      'text-transform': 'uppercase',
+      'text-size': lin(1, byRank(2, 10, 8.5), 3, byRank(2, 12, 10), 5, byRank(2, 14.5, 12), 8, byRank(2, 17, 14)),
+      'text-letter-spacing': 0.1,
+      'text-max-width': 6.5,
+      'symbol-sort-key': RANK,
+    },
+    paint: { 'text-color': C.countryLabel, ...halo },
+  },
+  ];
+}
+
+// Satellite: Esri World Imagery, the sharpest imagery free to use without a key. Tiles are drawn at
+// half their size (128 px) so phones get one image pixel per screen pixel instead of a blurry
+// enlargement. Over it, as in Apple's satellite view, borders, labels and faint main roads.
+const SATELLITE_TILES = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+
+export function satelliteStyle() {
+  const C = PALETTES.satellite;
+  return {
+    version: 8,
+    name: 'Tracker satellite',
+    glyphs: GLYPHS,
+    sources: {
+      imagery: {
+        type: 'raster',
+        tiles: [SATELLITE_TILES],
+        tileSize: 128,
+        maxzoom: 19,
+        attribution: 'Imagery &copy; Esri, Maxar, Earthstar Geographics',
+      },
+      omt: { type: 'vector', url: VECTOR_TILES, attribution: ATTRIBUTION },
+    },
+    layers: [
+      { id: 'space', type: 'background', paint: { 'background-color': C.land } },
+      { id: 'imagery', type: 'raster', source: 'imagery', paint: { 'raster-fade-duration': 150 } },
+      {
+        id: 'sat-motorway',
+        type: 'line',
+        source: 'omt',
+        'source-layer': 'transportation',
+        minzoom: 6,
+        filter: ['all', LINES, ['match', ['get', 'class'], ['motorway', 'trunk'], true, false], ['!=', ['get', 'brunnel'], 'tunnel']],
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: { 'line-color': C.motorway, 'line-width': grow(6, 0.5, 10, 1.1, 14, 2.6, 18, 8) },
+      },
+      {
+        id: 'sat-road',
+        type: 'line',
+        source: 'omt',
+        'source-layer': 'transportation',
+        minzoom: 10,
+        filter: ['all', LINES, ['match', ['get', 'class'], ['primary', 'secondary'], true, false], ['!=', ['get', 'brunnel'], 'tunnel']],
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: { 'line-color': C.road, 'line-width': grow(10, 0.4, 14, 1.6, 18, 6) },
+      },
+      ...overlayLayers(C, 'satellite'),
+    ],
+  };
+}
+
+// ── Images the styles ask for ─────────────────────────────────────────────
+
+function canvas(w, h) {
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = h;
+  return c.getContext('2d');
 }
 
 /**
  * Apple-style airport badge: a round blue badge with a white aircraft, drawn on a canvas and
  * handed to MapLibre as an image (2× for sharp edges).
  */
-export function airportBadge(theme) {
+function airportBadge(theme) {
   const C = PALETTES[theme] || PALETTES.light;
   const scale = 2;
   const size = 22 * scale;
-  const c = document.createElement('canvas');
-  c.width = c.height = size;
-  const ctx = c.getContext('2d');
+  const ctx = canvas(size, size);
   const r = size / 2;
   ctx.beginPath();
   ctx.arc(r, r, r - scale, 0, Math.PI * 2);
@@ -594,8 +825,48 @@ export function airportBadge(theme) {
   ctx.translate(-16, -16);
   ctx.fillStyle = '#ffffff';
   ctx.fill(plane);
-  return { image: ctx.getImageData(0, 0, size, size), pixelRatio: scale };
+  return { image: ctx.getImageData(0, 0, size, size), options: { pixelRatio: scale } };
+}
+
+/**
+ * A route-number sign: a rounded plate with a fine rim. MapLibre stretches its straight middle
+ * to fit the number it carries (sizes here are in image pixels, at 2×).
+ */
+function shield(kind, theme) {
+  const S = (PALETTES[theme] || PALETTES.light).shields[kind];
+  const w = 40;
+  const h = 32;
+  const ctx = canvas(w, h);
+  const plate = (inset, r) => {
+    const [x0, y0, x1, y1] = [inset, inset, w - inset, h - inset];
+    ctx.beginPath();
+    ctx.moveTo(x0 + r, y0);
+    ctx.arcTo(x1, y0, x1, y1, r);
+    ctx.arcTo(x1, y1, x0, y1, r);
+    ctx.arcTo(x0, y1, x0, y0, r);
+    ctx.arcTo(x0, y0, x1, y0, r);
+    ctx.closePath();
+  };
+  plate(1, 9);
+  ctx.fillStyle = S.edge;
+  ctx.fill();
+  plate(3, 7);
+  ctx.fillStyle = S.fill;
+  ctx.fill();
+  return {
+    image: ctx.getImageData(0, 0, w, h),
+    options: { pixelRatio: 2, stretchX: [[10, 30]], stretchY: [[10, 22]], content: [3, 3, w - 3, h - 3] },
+  };
+}
+
+/** The image a style asks for by name (`airport-badge-dark`, `shield-green-light`), or null. */
+export function styleImage(id) {
+  let m = /^airport-badge-(light|dark|satellite)$/.exec(id);
+  if (m) return airportBadge(m[1]);
+  m = /^shield-(green|blue|white)-(light|dark|satellite)$/.exec(id);
+  if (m) return shield(m[1], m[2]);
+  return null;
 }
 
 /** Land colour of each style, shown behind the map while it loads. */
-export const LAND = { light: PALETTES.light.land, dark: PALETTES.dark.land };
+export const LAND = { light: PALETTES.light.land, dark: PALETTES.dark.land, satellite: PALETTES.satellite.land };

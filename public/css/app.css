@@ -52,6 +52,13 @@
   --glass-shadow: 0 10px 28px rgba(0, 0, 0, 0.36), 0 1px 3px rgba(0, 0, 0, 0.26);
   --scrim: rgba(0, 0, 0, 0.2);
   --hero-halo: rgba(0, 0, 0, 0.45);
+  --wx-cloud: #eef1f6;
+  --wx-sun: #ffcc00;
+  --wx-moon: #f5e7a8;
+  --wx-drop: #64b8ff;
+  --wx-flake: #c8e6ff;
+  --seg-bg: rgba(118, 118, 128, 0.24);
+  --seg-on: #636366;
   --grip: rgba(235, 235, 245, 0.3);
   --btn-on: #ffffff;
   --btn-on-ink: #000000;
@@ -93,6 +100,13 @@
   --glass-shadow: 0 10px 28px rgba(0, 0, 0, 0.13), 0 1px 3px rgba(0, 0, 0, 0.09);
   --scrim: rgba(0, 0, 0, 0.08);
   --hero-halo: rgba(255, 255, 255, 0.85);
+  --wx-cloud: #aab3c2;
+  --wx-sun: #f7b500;
+  --wx-moon: #c9a227;
+  --wx-drop: #1e88e5;
+  --wx-flake: #6fb4ef;
+  --seg-bg: rgba(118, 118, 128, 0.12);
+  --seg-on: #ffffff;
   --grip: rgba(60, 60, 67, 0.3);
   --btn-on: #000000;
   --btn-on-ink: #ffffff;
@@ -695,6 +709,7 @@ kbd {
 }
 
 .range + .range::before,
+.seg-row + .toggle::before,
 .toggle + .toggle::before {
   content: '';
   position: absolute;
@@ -819,114 +834,310 @@ kbd {
   transform: translateX(14px);
 }
 
-/* Appearance picker: previews with a round check underneath, like iOS Display settings. */
-.style-cards {
+/* Appearance: the same place in each style, as in Apple Maps' map chooser. The chosen one wears a
+   ring with a little air around it, and its name turns bold. */
+.map-choices {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
-  padding: 18px 16px 16px;
+  padding: 16px 16px 14px;
   border-radius: var(--radius-group);
   background: var(--group);
 }
 
-.style-cards button {
+.map-choices button {
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: 9px;
+  min-width: 0;
   padding: 0;
   border: 0;
   background: none;
+  color: var(--label-2);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.map-thumb {
+  position: relative;
+  display: block;
+  max-width: 100%;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  border-radius: 14px;
+  background: var(--fill-3);
+  box-shadow: 0 0 0 0.5px var(--separator), 0 2px 8px rgba(0, 0, 0, 0.14);
+  outline: 2.5px solid transparent;
+  outline-offset: 3px;
+  transition: outline-color 0.2s ease, transform 0.45s var(--spring);
+}
+
+.map-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  -webkit-user-drag: none;
+}
+
+/* Satellite: the imagery's own tiles, placed so the view matches the other two exactly. */
+.thumb-satellite {
+  background: #2b3a2c;
+}
+
+.sat-tiles {
+  position: absolute;
+  left: -59.639%;
+  top: -6.139%;
+  width: 213.333%;
+  height: 113.778%;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+}
+
+.map-choices button:active .map-thumb {
+  transform: scale(0.95);
+}
+
+.map-choices button[aria-checked='true'] {
   color: var(--label);
+  font-weight: 600;
+}
+
+.map-choices button[aria-checked='true'] .map-thumb {
+  outline-color: var(--tint);
+}
+
+.map-choices button:focus-visible {
+  outline: none;
+}
+
+.map-choices button:focus-visible .map-thumb {
+  outline-color: var(--label-2);
+}
+
+.map-choices button[aria-checked='true']:focus-visible .map-thumb {
+  outline-color: var(--tint);
+  outline-width: 3.5px;
+}
+
+.map-name {
+  overflow: hidden;
+  text-align: center;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* An iOS segmented control: the chosen segment is a raised tile. */
+.seg-row {
+  position: relative;
+  padding: 12px 14px;
+}
+
+.segmented {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  padding: 2px;
+  border-radius: 10px;
+  background: var(--seg-bg);
+}
+
+.segmented button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  height: 32px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--label);
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.segmented button[aria-checked='true'] {
+  background: var(--seg-on);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12), 0 0 0 0.5px rgba(0, 0, 0, 0.04);
+  font-weight: 600;
+}
+
+.segmented button:focus-visible {
+  outline: 2px solid var(--tint);
+  outline-offset: 1px;
+}
+
+.segmented svg {
+  flex-shrink: 0;
+  width: 17px;
+  height: 17px;
+  fill: currentColor;
+  stroke: none;
+}
+
+.segmented svg .drops {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+.field-note {
+  margin: 0;
+  padding: 0 18px;
+  color: var(--label-2);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+/* ── Live weather ────────────────────────────────────────── */
+
+/* Weather where you look, as Apple Maps shows it: a small glass chip; tap it for the details. */
+.wx-chip {
+  position: fixed;
+  top: calc(var(--safe-top) + 10px + var(--search-h) + 10px);
+  left: 12px;
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  max-width: calc(100% - 24px - var(--fab) - 12px);
+  padding: 9px 14px;
+  border: 0;
+  border-radius: 22px;
+  color: var(--label);
+  font-size: 15px;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.wx-main {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.wx-icon .wx-svg {
+  display: block;
+  width: 24px;
+  height: 24px;
+}
+
+.wx-wind {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 4px;
+  color: var(--label-2);
   font-size: 13px;
   font-weight: 500;
 }
 
-.style-cards button::after {
-  content: '';
-  width: 23px;
-  height: 23px;
-  border-radius: 50%;
-  box-shadow: inset 0 0 0 1.5px var(--label-3);
+.wx-arrow {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
-.style-cards button[aria-checked='true']::after {
-  background: var(--tint)
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 23 23'%3E%3Cpath d='M7 11.8l3.1 3.1 6-6.6' fill='none' stroke='%231c1600' stroke-width='2.3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
-    center / 100% no-repeat;
-  box-shadow: none;
-  animation: check-in 0.5s var(--spring);
+.wx-more {
+  display: none;
+  color: var(--label-2);
+  font-size: 13px;
+  line-height: 1.35;
 }
 
-@keyframes check-in {
-  from {
-    transform: scale(0.5);
-  }
-}
-
-.swatch {
-  position: relative;
+.wx-chip[aria-expanded='true'] .wx-more {
   display: block;
-  width: 100%;
-  aspect-ratio: 9 / 15;
-  overflow: hidden;
-  border-radius: 16px;
-  box-shadow: 0 0 0 0.5px var(--separator), 0 3px 10px rgba(0, 0, 0, 0.2);
-  transition: transform 0.45s var(--spring);
 }
 
-.style-cards button:active .swatch {
-  transform: scale(0.94);
+/* Weather symbols, coloured as SF Symbols' multicolour set. */
+.wx-svg .wx-sun {
+  fill: var(--wx-sun);
 }
 
-/* A miniature of the app on each preview: its glass search bar and buttons change too. */
-.swatch::before,
-.swatch::after {
-  content: '';
-  position: absolute;
-  border-radius: 999px;
-  background: rgba(40, 40, 44, 0.78);
-  box-shadow: inset 0 0.5px 0 rgba(255, 255, 255, 0.3), 0 1px 3px rgba(0, 0, 0, 0.35);
+.wx-svg .wx-ray {
+  fill: none;
+  stroke: var(--wx-sun);
+  stroke-width: 1.8;
+  stroke-linecap: round;
 }
 
-.swatch::before {
-  top: 7%;
-  left: 9%;
-  right: 9%;
-  height: 8%;
+.wx-svg .wx-moon {
+  fill: var(--wx-moon);
 }
 
-.swatch::after {
-  top: 19%;
-  right: 9%;
-  width: 17%;
-  aspect-ratio: 1;
+.wx-svg .wx-cloud {
+  fill: var(--wx-cloud);
 }
 
-.swatch-light::before,
-.swatch-light::after,
-.swatch-satellite::before,
-.swatch-satellite::after {
-  background: rgba(255, 255, 255, 0.85);
-  box-shadow: inset 0 0.5px 0 #fff, 0 1px 3px rgba(0, 0, 0, 0.18);
+.wx-svg .wx-drop,
+.wx-svg .wx-flake,
+.wx-svg .wx-fog {
+  fill: none;
+  stroke-linecap: round;
 }
 
-.swatch-dark {
-  background: linear-gradient(115deg, transparent 46%, #4b4636 47%, #4b4636 50%, transparent 51%),
-    linear-gradient(25deg, transparent 60%, #3b3e45 61%, #3b3e45 63%, transparent 64%),
-    radial-gradient(circle at 70% 60%, #233041 24%, transparent 25%), #16191f;
+.wx-svg .wx-drop {
+  stroke: var(--wx-drop);
+  stroke-width: 1.8;
 }
 
-.swatch-light {
-  background: linear-gradient(115deg, transparent 46%, #f6d58a 47%, #f6d58a 50%, transparent 51%),
-    linear-gradient(25deg, transparent 60%, #ffffff 61%, #ffffff 63%, transparent 64%),
-    radial-gradient(circle at 70% 60%, #aad3df 24%, transparent 25%), #efe9dc;
+.wx-svg .wx-flake {
+  stroke: var(--wx-flake);
+  stroke-width: 2.6;
 }
 
-.swatch-satellite {
-  background: radial-gradient(circle at 70% 60%, #1d3b52 24%, transparent 25%),
-    radial-gradient(circle at 20% 82%, #5a6b3a 30%, transparent 31%),
-    linear-gradient(135deg, #3d5230, #6b6447 55%, #2f4426);
+.wx-svg .wx-fog {
+  stroke: var(--wx-cloud);
+  stroke-width: 1.8;
+}
+
+.wx-svg .wx-bolt {
+  fill: var(--wx-sun);
+}
+
+/* Weather at a flight's destination, in its row of the flight card. */
+.dest-wx {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.dest-wx .wx-svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Clouds are an infrared picture: cold cloud tops white, the warm ground dark. Screen blending
+   shows only the clouds, as white veils; on the light map the picture is inverted and multiplied,
+   so they show as soft grey shade instead. */
+.leaflet-weather-pane[data-kind='clouds'] {
+  mix-blend-mode: screen;
+  filter: contrast(1.35) brightness(1.05);
+}
+
+.leaflet-weather-pane[data-kind='clouds'][data-map='light'] {
+  mix-blend-mode: multiply;
+  filter: invert(1) brightness(1.18) contrast(1.15);
+  opacity: 0.65;
 }
 
 .about {
@@ -1627,6 +1838,16 @@ dd.danger {
   .flight-body {
     overflow-y: auto;
     overscroll-behavior: contain;
+  }
+
+  .wx-chip {
+    top: auto;
+    bottom: 12px;
+    max-width: 320px;
+  }
+
+  body.panel-open .wx-chip {
+    left: calc(12px + var(--panel-w) + 12px);
   }
 
   body.panel-open .notes {

@@ -4,7 +4,9 @@ const KEY = 'tracker.settings.v1';
 
 export const DEFAULTS = Object.freeze({
   mapStyle: 'dark',
-  allTrails: false,
+  weather: 'off', // weather drawn over the map: 'off', 'rain' or 'clouds'
+  liveWeather: true, // current conditions where you are looking, and at a flight's destination
+  airlineLogos: true, // airline logos next to the aircraft on the map
   filters: Object.freeze({ hideGround: false, militaryOnly: false, altMin: 0, altMax: 60000, text: '' }),
 });
 

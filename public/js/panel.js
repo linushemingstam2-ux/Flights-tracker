@@ -18,6 +18,7 @@ import {
   EMERGENCY_SQUAWKS,
   isEmergency,
 } from './format.js?v=2';
+import { describeWeather, weatherIcon } from './weather.js?v=1';
 
 const $ = (id) => document.getElementById(id);
 
@@ -422,6 +423,7 @@ export class Panel {
     $('p-flown-row').hidden = true;
     $('p-left-row').hidden = true;
     $('p-airline-row').hidden = true;
+    $('p-dest-wx-row').hidden = true;
     this.note = demo ? 'Simulated' : '';
     this.airline = '';
     setText('p-owner', '—');
@@ -465,6 +467,20 @@ export class Panel {
       setText('p-dest-city', d.city || d.name);
       $('p-dest-code').title = d.name;
     }
+    this.motion.refresh();
+  }
+
+  /** Live weather at the destination airport, or null to leave it out. */
+  setDestinationWeather(w, dest) {
+    const row = $('p-dest-wx-row');
+    if (!w) {
+      row.hidden = true;
+      return;
+    }
+    const d = describeWeather(w.code, w.isDay);
+    setText('p-dest-wx-code', dest.iata || dest.icao || 'destination');
+    $('p-dest-wx').innerHTML = `${weatherIcon(d.icon)}<span>${Math.round(w.temp)}° · ${d.text}</span>`;
+    row.hidden = false;
     this.motion.refresh();
   }
 
