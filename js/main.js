@@ -1,7 +1,8 @@
 // Flight radar app: map, live polling, selection, search, filters and settings.
 
 import { AircraftStore } from './store.js?v=2';
-import { AircraftLayer } from './aircraft-layer.js?v=22';
+import { AircraftLayer } from './aircraft-layer.js?v=23';
+import { GLLayer } from './gl-layer.js?v=1';
 import { Panel } from './panel.js?v=20';
 import { createDataSource } from './datasource.js?v=8';
 import { SimSource } from './sim.js?v=2';
@@ -10,7 +11,7 @@ import { svgIcon, shapeFor, CLASSIC_FILL } from './icons.js?v=15';
 import { shortAlt } from './format.js?v=2';
 import { distanceNm, normalizeLon } from './shared/geo.js';
 import { PROVIDERS } from './shared/providers.js';
-import { vectorStyle, styleImage, LAND } from './map-style.js?v=3';
+import { vectorStyle, styleImage, LAND } from './map-style.js?v=4';
 import { WeatherOverlay, currentWeather, describeWeather, weatherIcon, windArrow } from './weather.js?v=1';
 
 const L = window.L;
@@ -111,7 +112,7 @@ function webglAvailable() {
   }
 }
 
-/** MapLibre GL and its Leaflet bridge, loaded only when the vector map is first shown. */
+/** MapLibre GL, loaded only when the vector map is first shown. */
 function loadVectorLib() {
   const add = (tag, attrs) =>
     new Promise((resolve, reject) => {
@@ -122,7 +123,7 @@ function loadVectorLib() {
     });
   vectorLib ??= Promise.all([
     add('link', { rel: 'stylesheet', href: 'vendor/maplibre-gl/maplibre-gl.css' }),
-    add('script', { src: 'vendor/maplibre-gl/maplibre-gl.js' }).then(() => add('script', { src: 'vendor/maplibre-gl/leaflet-maplibre-gl.js' })),
+    add('script', { src: 'vendor/maplibre-gl/maplibre-gl.js' }),
   ]);
   return vectorLib;
 }
@@ -139,7 +140,7 @@ async function showVectorMap(theme) {
   if (glLayer) {
     if (glTheme !== theme) {
       glTheme = theme;
-      glLayer.getMaplibreMap().setStyle(vectorStyle(theme));
+      glLayer.setStyle(vectorStyle(theme));
     }
     return;
   }
@@ -154,11 +155,10 @@ async function showVectorMap(theme) {
   if (MAP_STYLES[settings.mapStyle].vector !== theme || glLayer) return;
   removeBaseMap();
   glTheme = theme;
-  glLayer = L.maplibreGL({
+  glLayer = new GLLayer({
     style: vectorStyle(theme),
     pixelRatio: Math.min(2, window.devicePixelRatio || 1), // crisp enough, and far lighter than 3×
-    updateInterval: 16,
-    fadeDuration: 200,
+    fadeDuration: 0, // labels that faded would redraw the whole map every frame while fading
   });
   glLayer.addTo(map);
   const gl = glLayer.getMaplibreMap();
