@@ -14,7 +14,7 @@ import {
   SELECTED_FILL,
   EMERGENCY_FILL,
   GROUND_FILL,
-} from './icons.js?v=14';
+} from './icons.js?v=15';
 import { destinationPoint, greatCirclePoints } from './shared/geo.js';
 import { isEmergency } from './format.js?v=2';
 import { airlineCode, logoBadge, onLogoReady, BADGE_PAD } from './airline-logos.js?v=1';
@@ -236,8 +236,12 @@ export const AircraftLayer = L.Layer.extend({
       this._drawTrail(ctx, selected, selHit, project, 3, 0.95, Infinity);
     }
 
-    // Shadows first, so they always fall on the ground and never across another aircraft.
-    for (const hit of hits) this._drawShadow(ctx, hit, iconPx, dpr, hit.ac === selected);
+    // Shadows first, so they always fall on the ground and never across another aircraft. A crowded
+    // view goes without: they hardly show there, and past about 8,000 drawing operations in a frame
+    // the browser's canvas gets some 30 times slower (measured in Chromium).
+    if (hits.length <= 1000) {
+      for (const hit of hits) this._drawShadow(ctx, hit, iconPx, dpr, hit.ac === selected);
+    }
     for (const hit of hits) {
       if (hit.ac !== selected) this._drawPlane(ctx, hit, iconPx, dpr, t, false);
     }

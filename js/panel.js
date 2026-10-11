@@ -5,7 +5,7 @@
 
 import { distanceNm } from './shared/geo.js';
 import { flagEmoji } from './shared/countries.js';
-import { svgIcon, shapeFor } from './icons.js?v=14';
+import { svgIcon, shapeFor } from './icons.js?v=15';
 import {
   formatAlt,
   formatSpeed,

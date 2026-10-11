@@ -5,7 +5,7 @@
 // a rounded sheen along the fuselage, shaded engines and a soft shadow where parts overlap.
 // Helicopter rotors are animated by the map layer.
 
-import { MODELS, modelIdFor } from './aircraft-models.js?v=9';
+import { MODELS, modelIdFor } from './aircraft-models.js?v=10';
 
 const rad = (d) => (d * Math.PI) / 180;
 const BOX = 64; // sprite design space: 64×64 units, nose up
