@@ -1,8 +1,8 @@
 // Flight radar app: map, live polling, selection, search, filters and settings.
 
 import { AircraftStore } from './store.js?v=2';
-import { AircraftLayer } from './aircraft-layer.js?v=24';
-import { GLLayer } from './gl-layer.js?v=2';
+import { AircraftLayer } from './aircraft-layer.js?v=25';
+import { GLLayer } from './gl-layer.js?v=3';
 import { Panel } from './panel.js?v=20';
 import { createDataSource } from './datasource.js?v=8';
 import { SimSource } from './sim.js?v=2';
