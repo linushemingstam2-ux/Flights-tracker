@@ -255,7 +255,7 @@ export function vectorStyle(theme) {
         'source-layer': 'landuse',
         minzoom: 5,
         filter: ['match', ['get', 'class'], ['residential', 'suburb', 'neighbourhood', 'commercial', 'retail', 'industrial', 'garages'], true, false],
-        paint: { 'fill-color': C.builtUp, 'fill-opacity': lin(5, 0.55, 9, 0.8, 13, 1) },
+        paint: { 'fill-antialias': false, 'fill-color': C.builtUp, 'fill-opacity': lin(5, 0.55, 9, 0.8, 13, 1) },
       },
       {
         id: 'wood',
@@ -263,7 +263,7 @@ export function vectorStyle(theme) {
         source: 'omt',
         'source-layer': 'landcover',
         filter: ['==', ['get', 'class'], 'wood'],
-        paint: { 'fill-color': C.wood, 'fill-opacity': lin(4, 0.35, 10, 0.55, 14, 0.7) },
+        paint: { 'fill-antialias': false, 'fill-color': C.wood, 'fill-opacity': lin(4, 0.35, 10, 0.55, 14, 0.7) },
       },
       {
         id: 'grass',
@@ -272,7 +272,7 @@ export function vectorStyle(theme) {
         'source-layer': 'landcover',
         minzoom: 9,
         filter: ['match', ['get', 'class'], ['grass', 'wetland'], true, false],
-        paint: { 'fill-color': C.park, 'fill-opacity': 0.6 },
+        paint: { 'fill-antialias': false, 'fill-color': C.park, 'fill-opacity': 0.6 },
       },
       {
         id: 'park',
@@ -280,7 +280,7 @@ export function vectorStyle(theme) {
         source: 'omt',
         'source-layer': 'park',
         filter: AREAS,
-        paint: { 'fill-color': C.park, 'fill-opacity': lin(5, 0.6, 10, 1) },
+        paint: { 'fill-antialias': false, 'fill-color': C.park, 'fill-opacity': lin(5, 0.6, 10, 1) },
       },
       {
         id: 'green-landuse',
@@ -289,7 +289,7 @@ export function vectorStyle(theme) {
         'source-layer': 'landuse',
         minzoom: 12,
         filter: ['match', ['get', 'class'], ['cemetery', 'pitch', 'stadium', 'playground', 'zoo'], true, false],
-        paint: { 'fill-color': C.park, 'fill-opacity': 0.75 },
+        paint: { 'fill-antialias': false, 'fill-color': C.park, 'fill-opacity': 0.75 },
       },
       {
         id: 'medical',
@@ -298,7 +298,7 @@ export function vectorStyle(theme) {
         'source-layer': 'landuse',
         minzoom: 12,
         filter: ['==', ['get', 'class'], 'hospital'],
-        paint: { 'fill-color': C.medical },
+        paint: { 'fill-antialias': false, 'fill-color': C.medical },
       },
       {
         id: 'sand',
@@ -306,7 +306,7 @@ export function vectorStyle(theme) {
         source: 'omt',
         'source-layer': 'landcover',
         filter: ['match', ['get', 'class'], ['sand', 'beach'], true, false],
-        paint: { 'fill-color': C.sand },
+        paint: { 'fill-antialias': false, 'fill-color': C.sand },
       },
       {
         id: 'ice',
@@ -314,7 +314,7 @@ export function vectorStyle(theme) {
         source: 'omt',
         'source-layer': 'landcover',
         filter: ['==', ['get', 'class'], 'ice'],
-        paint: { 'fill-color': C.ice, 'fill-opacity': 0.9 },
+        paint: { 'fill-antialias': false, 'fill-color': C.ice, 'fill-opacity': 0.9 },
       },
 
       // ── Relief: mountains and valleys shaded as if lit from the north-west, strongest when
@@ -343,7 +343,7 @@ export function vectorStyle(theme) {
         'source-layer': 'aeroway',
         minzoom: 10,
         filter: ['all', AREAS, ['match', ['get', 'class'], ['aerodrome', 'heliport'], true, false]],
-        paint: { 'fill-color': C.aerodrome, 'fill-opacity': lin(10, 0.7, 11, 1) },
+        paint: { 'fill-antialias': false, 'fill-color': C.aerodrome, 'fill-opacity': lin(10, 0.7, 11, 1) },
       },
       {
         id: 'apron',
@@ -352,7 +352,7 @@ export function vectorStyle(theme) {
         'source-layer': 'aeroway',
         minzoom: 12,
         filter: ['all', AREAS, ['match', ['get', 'class'], ['apron', 'helipad'], true, false]],
-        paint: { 'fill-color': C.apron },
+        paint: { 'fill-antialias': false, 'fill-color': C.apron },
       },
 
       // ── Water ──
@@ -392,7 +392,7 @@ export function vectorStyle(theme) {
         'source-layer': 'aeroway',
         minzoom: 11,
         filter: ['all', AREAS, ['match', ['get', 'class'], ['runway', 'taxiway'], true, false]],
-        paint: { 'fill-color': C.runway },
+        paint: { 'fill-antialias': false, 'fill-color': C.runway },
       },
       {
         id: 'taxiway',
@@ -762,7 +762,7 @@ export function satelliteStyle() {
     },
     layers: [
       { id: 'space', type: 'background', paint: { 'background-color': C.land } },
-      { id: 'imagery', type: 'raster', source: 'imagery', paint: { 'raster-fade-duration': 150 } },
+      { id: 'imagery', type: 'raster', source: 'imagery', paint: { 'raster-fade-duration': 0 } },
       {
         id: 'sat-motorway',
         type: 'line',

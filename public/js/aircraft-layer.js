@@ -68,7 +68,8 @@ export const AircraftLayer = L.Layer.extend({
     this._dirty = true;
     map.on('zoomanim', this._onZoomAnim, this);
     map.on('zoomend', this._onZoomEnd, this);
-    map.on('move resize viewreset', this._invalidate, this);
+    map.on('move', this._onMove, this);
+    map.on('moveend resize viewreset', this._invalidate, this);
     onLogoReady(() => (this._dirty = true));
     this._raf = requestAnimationFrame(this._frame);
   },
@@ -77,7 +78,8 @@ export const AircraftLayer = L.Layer.extend({
     cancelAnimationFrame(this._raf);
     map.off('zoomanim', this._onZoomAnim, this);
     map.off('zoomend', this._onZoomEnd, this);
-    map.off('move resize viewreset', this._invalidate, this);
+    map.off('move', this._onMove, this);
+    map.off('moveend resize viewreset', this._invalidate, this);
     L.DomUtil.remove(this._canvas);
     this._canvas = null;
   },
@@ -105,10 +107,21 @@ export const AircraftLayer = L.Layer.extend({
     this._dirty = true;
   },
 
+  // A pan only slides the frame already drawn, which moves with the map by itself (it is in one of
+  // the map's panes). While the pan goes on it is redrawn a few times a second, for aircraft
+  // coming in at the edges, and at once when the map stops. Any other change of view needs a new
+  // frame straight away.
+  _onMove() {
+    const map = this._map;
+    if (map.getZoom() !== this._zoom || !this._origin || !map.getPixelOrigin().equals(this._origin)) this._dirty = true;
+    else this._panned = true;
+  },
+
   // Redrawing the whole canvas is the costliest thing the app does, and every redraw also makes
-  // each glass control re-blur the map behind it. So the map is redrawn at once when it moves or
-  // something changes, but otherwise only as often as the fastest aircraft on screen visibly
-  // moves (see draw), and never more than about 60 times a second, even on 120 Hz screens.
+  // each glass control re-blur the map behind it. So it is redrawn at once when the view zooms or
+  // something changes, a few times a second during a pan (see _onMove), and otherwise only as often
+  // as the fastest aircraft on screen visibly moves (see draw), never more than about 60 times a
+  // second, even on 120 Hz screens.
   _frame() {
     this._raf = requestAnimationFrame(this._frame);
     if (!this._map || this._animating) return;
@@ -128,8 +141,10 @@ export const AircraftLayer = L.Layer.extend({
     this._opts = o;
     const t = Date.now();
     const since = t - this._lastDraw;
+    if (this._panned && since >= 50) this._dirty = true;
     if (since < 15 || (!this._dirty && since < this._interval)) return;
     this._dirty = false;
+    this._panned = false;
     this._lastDraw = t;
     this.draw(t);
   },
@@ -171,6 +186,7 @@ export const AircraftLayer = L.Layer.extend({
     L.DomUtil.setPosition(canvas, topLeft);
     this._center = map.getCenter();
     this._zoom = map.getZoom();
+    this._origin = map.getPixelOrigin();
 
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, w, h);
