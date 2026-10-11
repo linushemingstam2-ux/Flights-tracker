@@ -2,9 +2,11 @@
 // While the map is dragged, flung or pinched, the picture already drawn simply moves and scales
 // with it, which the browser does by itself, smoothly, at the screen's full rate. MapLibre draws
 // a new picture only when the edge of the old one comes near (pictures are drawn with a margin
-// all round for this), when a zoom has stretched it too far, and when the map comes to rest.
-// A new picture and its new place on screen always arrive together, in the same frame, so the
-// map never jumps, or lags behind the finger and the aircraft drawn over it.
+// all round for this, and further ahead in the direction the map is moving), when a zoom has
+// stretched it too far, and when the map comes to rest. Repaints that MapLibre wants for itself
+// meanwhile (map data arriving) wait for the next of those, or a quarter of a second, so the
+// finger always comes first. A new picture and its new place on screen always arrive together,
+// in the same frame, so the map never jumps, or lags behind the finger and the aircraft over it.
 // After the approach of @maplibre/maplibre-gl-leaflet (ISC licence).
 
 const L = window.L;
@@ -34,22 +36,41 @@ export const GLLayer = L.Layer.extend({
     this._setSize();
     const { pane, ...options } = this.options;
     const c = map.getCenter();
-    this._gl = new window.maplibregl.Map({
+    const gl = (this._gl = new window.maplibregl.Map({
       ...options,
       container: el,
       center: [c.lng, c.lat],
       zoom: map.getZoom() - 1, // MapLibre's tiles are 512 px, Leaflet's 256
       interactive: false,
       attributionControl: false,
-    });
+    }));
     // Leaflet decides where the map may go; MapLibre shows exactly the same place.
-    this._gl.setTransformConstrain?.((center, zoom) => ({ center, zoom }));
+    gl.setTransformConstrain?.((center, zoom) => ({ center, zoom }));
+    // While the map moves, MapLibre's own repaints wait (see _onMove), or for a finger held still,
+    // a moment.
+    const repaint = gl.triggerRepaint.bind(gl);
+    gl.triggerRepaint = () => {
+      if (!this._busy()) return repaint();
+      this._wanted = true;
+      this._wait ||= setTimeout(() => {
+        this._wait = 0;
+        if (this._wanted) this._draw();
+      }, 300);
+    };
+    this._wait = 0;
+    this._moving = false;
+    this._lastMove = 0;
+    this._wanted = false;
+    this._velocity = L.point(0, 0);
+    this._last = null;
     this._at = null;
     this._placed = null;
     this._draw();
   },
 
   onRemove() {
+    clearTimeout(this._wait);
+    this._wait = 0;
     this._gl.remove();
     this._gl = null;
     L.DomUtil.remove(this._container);
@@ -57,7 +78,13 @@ export const GLLayer = L.Layer.extend({
   },
 
   getEvents() {
-    return { move: this._onMove, moveend: this._onMoveEnd, zoomanim: this._onZoomAnim, resize: this._onResize };
+    return {
+      movestart: this._onMoveStart,
+      move: this._onMove,
+      moveend: this._onMoveEnd,
+      zoomanim: this._onZoomAnim,
+      resize: this._onResize,
+    };
   },
 
   getAttribution() {
@@ -80,6 +107,11 @@ export const GLLayer = L.Layer.extend({
     this._gl?.setStyle(style);
   },
 
+  /** The map is being moved. (A move that never reported its end is over after a second.) */
+  _busy() {
+    return this._moving && performance.now() - this._lastMove < 1000;
+  },
+
   _setSize() {
     const size = this._map.getSize();
     this._pad = L.point(margin(size.x), margin(size.y));
@@ -100,13 +132,18 @@ export const GLLayer = L.Layer.extend({
     const gl = this._gl;
     if (!map || !gl) return;
     const zoom = map.getZoom();
-    const topLeft = map.containerPointToLayerPoint([0, 0]).subtract(this._pad).round();
+    // Most of the margin goes ahead of a moving map: about a quarter of a second of travel.
+    const pad = this._pad;
+    const v = this._busy() ? this._velocity : L.point(0, 0);
+    const lead = L.point(Math.max(-0.7, Math.min(0.7, (v.x * 250) / pad.x)) * pad.x, Math.max(-0.7, Math.min(0.7, (v.y * 250) / pad.y)) * pad.y);
+    const topLeft = map.containerPointToLayerPoint([0, 0]).subtract(pad).add(lead).round();
     // The picture's top left corner in world pixels at this zoom: where it belongs as the map moves.
     this._at = { zoom, origin: map.getPixelOrigin().add(topLeft), time: performance.now() };
     this._place(topLeft, 1);
-    const size = map.getSize().add(this._pad.multiplyBy(2));
+    const size = map.getSize().add(pad.multiplyBy(2));
     const center = map.layerPointToLatLng(topLeft.add(size.divideBy(2)));
-    gl.jumpTo({ center: [center.lng, center.lat], zoom: zoom - 1 });
+    gl.jumpTo({ center: [center.lng, center.lat], zoom: zoom - 1 }); // asks for a repaint, done right here:
+    this._wanted = false;
     gl.redraw(); // now, not at the next frame
   },
 
@@ -117,27 +154,51 @@ export const GLLayer = L.Layer.extend({
     return { scale, pos: scale === 1 ? pos.round() : pos };
   },
 
+  _onMoveStart() {
+    this._moving = true;
+    this._lastMove = performance.now();
+    this._last = null;
+    this._velocity = L.point(0, 0);
+  },
+
   _onMove() {
     if (!this._at) return;
     const map = this._map;
-    const { scale, pos } = this._follow(map.getZoom(), map.getPixelOrigin());
-    // How much of the margin is left on each side of the screen.
+    const now = performance.now();
+    this._lastMove = now;
+    const zoom = map.getZoom();
     const view = map.containerPointToLayerPoint([0, 0]);
+    // How fast the view travels (px per ms), smoothed; reset by any zoom.
+    const last = this._last;
+    if (last && last.zoom === zoom && now > last.time) {
+      const k = Math.min(1, (now - last.time) / 60);
+      this._velocity = this._velocity.multiplyBy(1 - k).add(view.subtract(last.view).divideBy(now - last.time).multiplyBy(k));
+    } else if (last) {
+      this._velocity = L.point(0, 0);
+    }
+    this._last = { view, zoom, time: now };
+
+    const { scale, pos } = this._follow(zoom, map.getPixelOrigin());
+    // How much of the margin is left on each side of the screen.
     const size = map.getSize();
     const pad = this._pad;
     const right = pos.x + (size.x + 2 * pad.x) * scale - (view.x + size.x);
     const bottom = pos.y + (size.y + 2 * pad.y) * scale - (view.y + size.y);
-    const nearEdge = Math.min(view.x - pos.x, right) < pad.x * 0.4 || Math.min(view.y - pos.y, bottom) < pad.y * 0.4;
+    const nearEdge = Math.min(view.x - pos.x, right) < pad.x * 0.3 || Math.min(view.y - pos.y, bottom) < pad.y * 0.3;
     // A zoom stretches the picture: keep it sharp by drawing again now and then.
-    const stretched = scale > 1.3 || scale < 0.8 || (scale !== 1 && performance.now() - this._at.time > 150);
-    if (nearEdge || stretched) this._draw();
+    const age = now - this._at.time;
+    const stretched = scale > 1.3 || scale < 0.8 || (scale !== 1 && age > 150);
+    // Map data that arrived meanwhile is shown a quarter of a second at a time.
+    if (nearEdge || stretched || (this._wanted && age > 250)) this._draw();
     else this._place(pos, scale);
   },
 
   _onMoveEnd() {
+    this._moving = false;
     const map = this._map;
     const topLeft = map.containerPointToLayerPoint([0, 0]).subtract(this._pad).round();
-    if (!this._at || map.getZoom() !== this._at.zoom || !map.getPixelOrigin().add(topLeft).equals(this._at.origin)) this._draw();
+    const moved = !this._at || map.getZoom() !== this._at.zoom || !map.getPixelOrigin().add(topLeft).equals(this._at.origin);
+    if (moved || this._wanted) this._draw();
   },
 
   // Leaflet's zoom animation: the picture is moved and scaled to where it belongs at the end, and

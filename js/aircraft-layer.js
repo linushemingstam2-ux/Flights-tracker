@@ -66,10 +66,14 @@ export const AircraftLayer = L.Layer.extend({
     this._lastDraw = 0;
     this._interval = 0;
     this._dirty = true;
+    this._moving = false;
+    this._lastMove = 0;
     map.on('zoomanim', this._onZoomAnim, this);
     map.on('zoomend', this._onZoomEnd, this);
+    map.on('movestart', this._onMoveStart, this);
     map.on('move', this._onMove, this);
-    map.on('moveend resize viewreset', this._invalidate, this);
+    map.on('moveend', this._onMoveEnd, this);
+    map.on('resize viewreset', this._invalidate, this);
     onLogoReady(() => (this._dirty = true));
     this._raf = requestAnimationFrame(this._frame);
   },
@@ -78,8 +82,10 @@ export const AircraftLayer = L.Layer.extend({
     cancelAnimationFrame(this._raf);
     map.off('zoomanim', this._onZoomAnim, this);
     map.off('zoomend', this._onZoomEnd, this);
+    map.off('movestart', this._onMoveStart, this);
     map.off('move', this._onMove, this);
-    map.off('moveend resize viewreset', this._invalidate, this);
+    map.off('moveend', this._onMoveEnd, this);
+    map.off('resize viewreset', this._invalidate, this);
     L.DomUtil.remove(this._canvas);
     this._canvas = null;
   },
@@ -107,21 +113,30 @@ export const AircraftLayer = L.Layer.extend({
     this._dirty = true;
   },
 
-  // A pan only slides the frame already drawn, which moves with the map by itself (it is in one of
-  // the map's panes). While the pan goes on it is redrawn a few times a second, for aircraft
-  // coming in at the edges, and at once when the map stops. Any other change of view needs a new
-  // frame straight away.
+  // While the map is dragged or flung, the frame already drawn slides with it by itself (it is in
+  // one of the map's panes), so nothing is redrawn until the map stops: the finger moves the map
+  // with nothing else to do. Aircraft coming in at the edges appear then. A zoom needs new frames.
+  _onMoveStart() {
+    this._moving = true;
+    this._lastMove = Date.now();
+  },
+
   _onMove() {
     const map = this._map;
+    this._lastMove = Date.now();
     if (map.getZoom() !== this._zoom || !this._origin || !map.getPixelOrigin().equals(this._origin)) this._dirty = true;
-    else this._panned = true;
+  },
+
+  _onMoveEnd() {
+    this._moving = false;
+    this._dirty = true;
   },
 
   // Redrawing the whole canvas is the costliest thing the app does, and every redraw also makes
-  // each glass control re-blur the map behind it. So it is redrawn at once when the view zooms or
-  // something changes, a few times a second during a pan (see _onMove), and otherwise only as often
-  // as the fastest aircraft on screen visibly moves (see draw), never more than about 60 times a
-  // second, even on 120 Hz screens.
+  // each glass control re-blur the map behind it. So it is redrawn when the view zooms or
+  // something changes, not at all while the map slides (see _onMoveStart), and otherwise only as
+  // often as the fastest aircraft on screen visibly moves (see draw), never more than about 60
+  // times a second, even on 120 Hz screens.
   _frame() {
     this._raf = requestAnimationFrame(this._frame);
     if (!this._map || this._animating) return;
@@ -141,20 +156,31 @@ export const AircraftLayer = L.Layer.extend({
     this._opts = o;
     const t = Date.now();
     const since = t - this._lastDraw;
-    if (this._panned && since >= 50) this._dirty = true;
+    // While the map moves, redraw only for a zoom, and then at most about 30 times a second. (A
+    // move that never reported its end is over after a second without news.)
+    if (this._moving && t - this._lastMove > 1000) this._moving = false;
+    if (this._moving && (!this._dirty || since < 33)) return;
     if (since < 15 || (!this._dirty && since < this._interval)) return;
     this._dirty = false;
-    this._panned = false;
     this._lastDraw = t;
     this.draw(t);
+  },
+
+  /** How far the map has slid since the frame was drawn, in screen pixels. */
+  _slide() {
+    const map = this._map;
+    if (!this._topLeft || map.getZoom() !== this._zoom || !map.getPixelOrigin().equals(this._origin)) return { x: 0, y: 0 };
+    const now = map.containerPointToLayerPoint([0, 0]);
+    return { x: this._topLeft.x - now.x, y: this._topLeft.y - now.y };
   },
 
   /** The aircraft drawn nearest to a container point, within `radius` px. */
   hitTest(point, radius = 15) {
     let best = null;
     let bestD = radius * radius;
+    const s = this._slide();
     for (const h of this._hits) {
-      const d = (h.x - point.x) ** 2 + (h.y - point.y) ** 2;
+      const d = (h.x + s.x - point.x) ** 2 + (h.y + s.y - point.y) ** 2;
       if (d <= bestD) {
         bestD = d;
         best = h.ac;
@@ -165,7 +191,10 @@ export const AircraftLayer = L.Layer.extend({
 
   /** Current on-screen position of an aircraft, if drawn. */
   screenPosition(hex) {
-    return this._hits.find((h) => h.ac.hex === hex) || null;
+    const h = this._hits.find((hit) => hit.ac.hex === hex);
+    if (!h) return null;
+    const s = this._slide();
+    return s.x || s.y ? { ...h, x: h.x + s.x, y: h.y + s.y } : h;
   },
 
   draw(t) {
@@ -184,6 +213,7 @@ export const AircraftLayer = L.Layer.extend({
     }
     const topLeft = map.containerPointToLayerPoint([0, 0]);
     L.DomUtil.setPosition(canvas, topLeft);
+    this._topLeft = topLeft;
     this._center = map.getCenter();
     this._zoom = map.getZoom();
     this._origin = map.getPixelOrigin();
@@ -242,7 +272,7 @@ export const AircraftLayer = L.Layer.extend({
       if (!lively && (isEmergency(ac) || rotorFor(ac._shape ?? shapeFor(ac)))) lively = true;
     }
     let fps = Math.max(8, (fastest * 0.5144) / metresPerPx / 0.5);
-    if (lively) fps = Math.max(fps, 24); // spinning rotors, emergency pulse
+    if (lively) fps = Math.max(fps, 15); // spinning rotors, emergency pulse
     if (dt < 900) fps = 60; // the selected aircraft popping up
     this._interval = 1000 / Math.min(60, fps);
 
