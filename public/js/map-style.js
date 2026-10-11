@@ -12,14 +12,15 @@ const ATTRIBUTION =
   '<a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">&copy; OpenMapTiles</a> ' +
   'Data from <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>';
 
-// Heights of the land, encoded in the colours of PNG tiles. Beyond zoom 11 the shading is faint
-// and smooth, so closer in the same tiles are enlarged instead of downloading finer ones.
+// Heights of the land, encoded in the colours of PNG tiles. They are drawn at 512 px: soft shading
+// needs no more detail, and each tile costs the phone a pause to prepare, so four times fewer
+// tiles keep the map smooth. Beyond zoom 12 the same tiles are enlarged.
 const TERRAIN = {
   type: 'raster-dem',
   tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
   encoding: 'terrarium',
-  tileSize: 256,
-  maxzoom: 11,
+  tileSize: 512,
+  maxzoom: 12,
   attribution: 'Terrain <a href="https://github.com/tilezen/joerd/blob/master/docs/attribution.md" target="_blank" rel="noopener">Mapzen and others</a>',
 };
 

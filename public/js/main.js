@@ -1,8 +1,8 @@
 // Flight radar app: map, live polling, selection, search, filters and settings.
 
 import { AircraftStore } from './store.js?v=2';
-import { AircraftLayer } from './aircraft-layer.js?v=23';
-import { GLLayer } from './gl-layer.js?v=1';
+import { AircraftLayer } from './aircraft-layer.js?v=24';
+import { GLLayer } from './gl-layer.js?v=2';
 import { Panel } from './panel.js?v=20';
 import { createDataSource } from './datasource.js?v=8';
 import { SimSource } from './sim.js?v=2';
@@ -11,7 +11,7 @@ import { svgIcon, shapeFor, CLASSIC_FILL } from './icons.js?v=15';
 import { shortAlt } from './format.js?v=2';
 import { distanceNm, normalizeLon } from './shared/geo.js';
 import { PROVIDERS } from './shared/providers.js';
-import { vectorStyle, styleImage, LAND } from './map-style.js?v=4';
+import { vectorStyle, styleImage, LAND } from './map-style.js?v=5';
 import { WeatherOverlay, currentWeather, describeWeather, weatherIcon, windArrow } from './weather.js?v=1';
 
 const L = window.L;
@@ -260,6 +260,28 @@ let inflight = false;
 let pending = false;
 let lastFetch = 0;
 
+// While the map is dragged, flung, pinched or animated, new traffic waits until it stops: taking
+// in thousands of aircraft would hold up the finger for a moment.
+let moving = false;
+map.on('movestart', () => (moving = true));
+map.on('moveend', () => (moving = false));
+async function whenStill() {
+  const giveUp = Date.now() + 5000;
+  while (moving && Date.now() < giveUp) {
+    await new Promise((resolve) => {
+      const done = () => {
+        clearTimeout(timer);
+        map.off('moveend', done);
+        resolve();
+      };
+      const timer = setTimeout(done, 3000);
+      map.on('moveend', done);
+    });
+    // A moment more, so a quick next swipe starts smoothly too.
+    await new Promise((resolve) => setTimeout(resolve, 300));
+  }
+}
+
 function viewQuery() {
   const c = map.getCenter();
   const b = map.getBounds();
@@ -284,9 +306,11 @@ async function refresh() {
   const q = viewQuery();
   try {
     const res = await src.area(q.lat, q.lon, q.radius, DATA_SOURCE);
+    const fetched = Date.now();
+    await whenStill();
     if (src !== source) return;
     const seen = store.ingest(res.aircraft, {
-      t: Date.now(),
+      t: fetched,
       age: res.age || 0,
       area: { lat: q.lat, lon: q.lon, radius: res.radius ?? q.radius },
     });
